@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Food Tracker</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 1rem; }
+    h2 { margin: .2rem 0 .8rem; }
+    video { width: 100%; border-radius: 10px; background: #000; aspect-ratio: 4/3; object-fit: cover; }
+    .row { margin: .8rem 0; }
+    input { font-size: 1.2rem; padding: .35rem .5rem; border: 1px solid #ccc; border-radius: 6px; }
+    button { font-size: 1.1rem; padding: .65rem 1.3rem; border: 0; border-radius: 8px;
+             background: #1a73e8; color: #fff; }
+    #status { min-height: 1.4rem; font-weight: 600; margin-top: .6rem; }
+    .ok  { color: #137333; }
+    .err { color: #c5221f; }
+  </style>
+</head>
+<body>
+  <h2>Food Tracker</h2>
+ 
+  <!-- ===== EDIT THESE TWO LINES ===== -->
+  <script>
+    // Your Apps Script Web App URL (the .../exec link from the deploy step):
+    const API_URL = https://script.google.com/macros/s/AKfycbwDuZ-rvyt1Cuo_nBHevfH36M9uriGU1MttMusd5QtwaryKW546eNN3KTD8FYeeEdPH/exec
+    // Only needed if you set CONFIG.API_KEY in the script. Otherwise leave "".
+    const API_KEY = "";
+  </script>
+  <!-- ================================ -->
+ 
+  <video id="cam" autoplay playsinline muted></video>
+ 
+  <div class="row">
+    Barcode: <input id="code" inputmode="numeric" autocomplete="off" size="16">
+    &nbsp; grams: <input id="grams" value="100" size="4">
+  </div>
+  <button id="logBtn">Log it</button>
+  <p id="status"></p>
+ 
+  <script>
+    const codeEl   = document.getElementById('code');
+    const statusEl = document.getElementById('status');
+    let lastSent = '';  // prevents the scanner from re-logging the same code repeatedly
+ 
+    function setStatus(msg, cls) { statusEl.textContent = msg; statusEl.className = cls || ''; }
+ 
+    /* ---- Camera scanning: native BarcodeDetector (Chrome on Android) ---- */
+    async function startCamera() {
+      if (!('BarcodeDetector' in window)) {
+        setStatus('Camera scan not supported on this browser — type the barcode and tap Log it.', 'err');
+        return;
+      }
+      const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const video = document.getElementById('cam');
+        video.srcObject = stream;
+        // Poll the video for barcodes a couple of times per second.
+        setInterval(async () => {
+          try {
+            const codes = await detector.detect(video);
+            if (codes.length) {
+              const v = codes[0].rawValue;
+              codeEl.value = v;
+              if (v !== lastSent) { lastSent = v; sendBarcode(); }  // auto-log first time we see it
+            }
+          } catch (_) { /* transient detector errors are safe to ignore */ }
+        }, 600);
+      } catch (err) {
+        setStatus('Camera error: ' + err.message + ' — you can still type the barcode.', 'err');
+      }
+    }
+ 
+    /* ---- Send to Apps Script via JSONP (no CORS, returns the result) ---- */
+    function sendBarcode() {
+      const code = codeEl.value.trim();
+      if (!code) { setStatus('Enter a barcode first.', 'err'); return; }
+      if (API_URL.indexOf('PASTE_') === 0) { setStatus('Set API_URL at the top of this file.', 'err'); return; }
+      setStatus('Logging ' + code + '…');
+ 
+      const cb = 'cb_' + Date.now();
+      const script = document.createElement('script');
+ 
+      // The Apps Script response calls this function with the result object.
+      window[cb] = function (out) {
+        delete window[cb];
+        script.remove();
+        if (out.ok) setStatus('\u2713 Logged ' + out.item + ' (from ' + out.source + ')', 'ok');
+        else        setStatus('\u2717 ' + out.error, 'err');
+      };
+ 
+      const grams = encodeURIComponent(document.getElementById('grams').value || '100');
+      script.src = API_URL +
+        '?barcode='  + encodeURIComponent(code) +
+        '&grams='    + grams +
+        '&callback=' + cb +
+        (API_KEY ? '&key=' + encodeURIComponent(API_KEY) : '') +
+        '&_='        + Date.now();   // cache-buster
+      script.onerror = function () { setStatus('Network error reaching the script.', 'err'); };
+      document.body.appendChild(script);
+    }
+ 
+    // Manual button: mark this code as "sent" so the scanner loop won't duplicate it.
+    document.getElementById('logBtn').addEventListener('click', () => {
+      lastSent = codeEl.value.trim();
+      sendBarcode();
+    });
+ 
+    startCamera();
+  </script>
+</body>
+</html>
