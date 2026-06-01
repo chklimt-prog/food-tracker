@@ -1,6 +1,3 @@
-
-raw
-Index · HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,18 +19,18 @@ Index · HTML
   button.ghost{background:var(--card2);color:var(--ink)}
   button:disabled{opacity:.5}
   input,select{font:inherit;padding:.55rem;border:1px solid var(--line);border-radius:9px;background:var(--card2);color:var(--ink);width:100%}
- 
+
   .datenav{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0}
   .datenav button{background:var(--card2);color:var(--ink);width:42px;height:42px;border-radius:50%;font-size:1.25rem;padding:0}
   .datenav .label{font-weight:600;min-width:150px;text-align:center}
- 
+
   .tabs{display:flex;gap:6px;margin:10px 0}
   .tabs button{flex:1;background:var(--card2);color:var(--ink);padding:.55rem .3rem;font-size:.92rem}
   .tabs button.active{background:var(--accent);color:#fff}
   .panel{margin:8px 0}
   video{width:100%;border-radius:12px;background:#000;aspect-ratio:4/3;object-fit:cover;margin-top:8px}
   .bigbtn{width:100%;padding:.9rem;font-size:1.05rem}
- 
+
   .group{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}
   .group h2{display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;font-size:1rem;border-left:5px solid var(--line)}
   .group[data-group=breakfast] h2{border-color:var(--breakfast)}
@@ -49,14 +46,16 @@ Index · HTML
   .item .del{background:transparent;color:var(--muted);padding:0 8px;font-size:1.3rem;line-height:1;touch-action:auto}
   .empty{color:var(--muted);font-size:.85rem;padding:4px 6px}
   .sortable-ghost{opacity:.35}
- 
+
   .recent{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin:7px 0;cursor:pointer}
   .recent .nm{flex:1} .recent .cal{color:var(--muted);font-size:.85rem}
- 
+
   .totals{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--card);
-          border-top:1px solid var(--line);padding:9px 16px;display:flex;justify-content:space-between;font-size:.85rem}
-  .totals b{font-size:1.05rem;color:var(--ink)}
- 
+          border-top:1px solid var(--line);padding:8px 16px;display:flex;flex-direction:column;gap:1px}
+  .totals .kcal{font-size:.85rem}
+  .totals b{font-size:1.1rem;color:var(--ink)}
+  .totals .macroline{color:var(--muted);font-size:.82rem}
+
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:20}
   .modal.show{display:flex}
   .sheet{background:var(--card);width:100%;max-width:520px;margin:0 auto;border-radius:16px 16px 0 0;padding:16px;max-height:92vh;overflow:auto}
@@ -66,7 +65,7 @@ Index · HTML
   .macros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .row{display:flex;gap:8px;margin-top:14px}
   .row button{flex:1;padding:.8rem}
- 
+
   /* autocomplete */
   .suggest{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--card2);border:1px solid var(--line);
            border-radius:9px;margin-top:3px;max-height:230px;overflow:auto;display:none}
@@ -75,36 +74,36 @@ Index · HTML
   .suggest .sg:hover{background:var(--accent);color:#fff}
   .suggest .sgcal{color:var(--muted);font-size:.82rem;white-space:nowrap}
   .suggest .sg:hover .sgcal{color:#e8eefc}
- 
+
   #toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:#000;color:#fff;
          padding:.6rem 1rem;border-radius:10px;font-size:.9rem;opacity:0;transition:opacity .25s;z-index:30;pointer-events:none;border:1px solid var(--line)}
   #toast.show{opacity:.97}
 </style>
 </head>
 <body>
- 
+
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbw8vCIFHwv-ha--AiKgKZlvciWw_ZEPWo2qcjMX1OIbPyIhHWRJDnDXXEer9WO0LnaE/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbwpAMX4jfxJ_VYTUr1NcimgqSr_8aLGdWHMx8Pg8jeBYW3SJeYOqvXTInYwpviq3ELm/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
- 
+
 <h1>Food Tracker</h1>
- 
+
 <div class="datenav">
   <button id="prevDay">&lsaquo;</button>
   <span class="label" id="dateLabel">Today</span>
   <button id="nextDay">&rsaquo;</button>
 </div>
- 
+
 <div class="tabs">
   <button data-mode="scan" class="active">Scan</button>
   <button data-mode="photo">Photo</button>
   <button data-mode="manual">Manual</button>
   <button data-mode="recents">Recents</button>
 </div>
- 
+
 <div id="panel-scan" class="panel">
   <button class="bigbtn" id="camToggle">📷 Start camera</button>
   <video id="cam" autoplay playsinline muted style="display:none"></video>
@@ -121,14 +120,14 @@ Index · HTML
 <div id="panel-recents" class="panel" style="display:none">
   <div id="recentsList"><p class="muted">…</p></div>
 </div>
- 
+
 <div id="board"><p class="muted">Loading…</p></div>
- 
+
 <div class="totals">
-  <span>Total <b id="tCal">0</b> kcal</span>
-  <span class="muted" id="tMacros">C 0 · F 0 · P 0</span>
+  <span class="kcal">Total <b id="tCal">0</b> kcal</span>
+  <span class="macroline" id="tMacros">C 0 · F 0 · P 0 · Fib 0 · Sug 0</span>
 </div>
- 
+
 <!-- Preview / edit modal -->
 <div class="modal" id="modal">
   <div class="sheet">
@@ -159,15 +158,22 @@ Index · HTML
     </div>
   </div>
 </div>
- 
+
 <!-- Copy-to modal with date stepper -->
 <div class="modal" id="copyModal">
   <div class="sheet">
     <h3 id="cTitle">Copy to…</h3>
+    <div class="field"><label>Day</label></div>
     <div class="datenav">
       <button id="cPrev">&lsaquo;</button>
       <span class="label" id="cLabel">Today</span>
       <button id="cNext">&rsaquo;</button>
+    </div>
+    <div class="field"><label>Meal</label>
+      <select id="cGroup">
+        <option value="breakfast">Breakfast</option><option value="lunch">Lunch</option>
+        <option value="snacks">Snacks</option><option value="dinner">Dinner</option>
+      </select>
     </div>
     <div class="row">
       <button class="ghost" id="cCancel">Cancel</button>
@@ -175,9 +181,9 @@ Index · HTML
     </div>
   </div>
 </div>
- 
+
 <div id="toast"></div>
- 
+
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 const GROUPS=[["breakfast","Breakfast"],["lunch","Lunch"],["snacks","Snacks"],["dinner","Dinner"]];
@@ -185,8 +191,8 @@ let currentDate=new Date();
 let scanning=false,lastScan="",lastScanAt=0;
 let previewBase=null,previewBarcode="";
 let copyGroupKey="",copyDate=new Date();
-let foodsCache=null;
- 
+let foodsCache=[],foodsLoaded=false,foodsLoading=null;
+
 /* ---------- JSONP ---------- */
 function api(params){
   return new Promise((resolve,reject)=>{
@@ -202,7 +208,7 @@ function api(params){
     document.body.appendChild(s);
   });
 }
- 
+
 /* ---------- dates ---------- */
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function sameDay(a,b){return fmt(a)===fmt(b);}
@@ -210,13 +216,13 @@ function dayLabel(d){const t=new Date(),y=new Date();y.setDate(t.getDate()-1);
   if(sameDay(d,t))return "Today"; if(sameDay(d,y))return "Yesterday";
   return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});}
 function shiftDay(n){currentDate.setDate(currentDate.getDate()+n);loadDay();}
- 
+
 /* ---------- toast ---------- */
 let toastTimer;
 function toast(msg,isErr){const el=document.getElementById("toast");el.textContent=msg;
   el.style.borderColor=isErr?"var(--err)":"var(--line)";el.classList.add("show");
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600);}
- 
+
 /* ---------- day board ---------- */
 async function loadDay(){
   document.getElementById("dateLabel").textContent=dayLabel(currentDate);
@@ -242,14 +248,14 @@ function renderDay(data){
   });
   const t=data.totals;
   document.getElementById("tCal").textContent=Math.round(t.calories);
-  document.getElementById("tMacros").textContent="C "+Math.round(t.carbs)+" · F "+Math.round(t.fat)+" · P "+Math.round(t.protein);
+  document.getElementById("tMacros").textContent="C "+Math.round(t.carbs)+" · F "+Math.round(t.fat)+" · P "+Math.round(t.protein)+" · Fib "+Math.round(t.fiber)+" · Sug "+Math.round(t.sugar);
   wireBoard();
 }
 function itemHTML(it){return '<div class="item" data-id="'+it.id+'">'+
   '<span class="nm">'+esc(it.item)+'</span><span class="cal">'+Math.round(it.calories)+' kcal</span>'+
   '<button class="del" data-id="'+it.id+'" title="Remove">×</button></div>';}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
- 
+
 function wireBoard(){
   document.querySelectorAll(".del").forEach(b=>b.addEventListener("click",async e=>{
     e.stopPropagation();
@@ -275,7 +281,7 @@ function wireBoard(){
     });
   });
 }
- 
+
 /* ---------- modes ---------- */
 function setMode(mode){
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
@@ -284,7 +290,7 @@ function setMode(mode){
   if(mode==="recents")loadRecents();
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
- 
+
 /* ---------- scan (camera only on demand) ---------- */
 let stream=null,detector=null,scanTimer=null;
 document.getElementById("camToggle").onclick=()=>{ stream?stopScan():startScan(); };
@@ -319,7 +325,7 @@ async function onBarcode(code){
     else{toast(r.error||"Not found",true);openPreview({title:"Not found — enter manually",item:"",barcode:code});}
   }catch(e){toast("Lookup failed: "+e.message,true);scanning=true;}
 }
- 
+
 /* ---------- photo (full label OCR, German + English) ---------- */
 document.getElementById("photoBtn").onclick=()=>document.getElementById("photoInput").click();
 document.getElementById("photoInput").onchange=async e=>{
@@ -340,7 +346,7 @@ function loadTesseract(){
 }
 async function runOCR(file){await loadTesseract();
   const {data}=await Tesseract.recognize(file,"deu+eng",{logger:()=>{}});return data.text||"";}
- 
+
 // First number on the keyword line, or the line just below it (handles wrapped columns).
 function near(text,re){
   const lines=text.split(/\n/);
@@ -376,10 +382,10 @@ function parseLabel(text){
   };
 }
 function guessName(text){const ln=(text||"").split(/\n/).map(s=>s.trim()).filter(s=>s.length>2);return ln[0]?ln[0].slice(0,40):"";}
- 
+
 /* ---------- manual ---------- */
 document.getElementById("manualBtn").onclick=()=>{ensureFoods();openPreview({title:"New manual entry",item:""});};
- 
+
 /* ---------- recents ---------- */
 async function loadRecents(){
   const el=document.getElementById("recentsList");el.innerHTML='<p class="muted">Loading…</p>';
@@ -396,26 +402,34 @@ async function loadRecents(){
     });
   }catch(e){el.innerHTML='<p class="err">Could not load recents: '+e.message+'</p>';}
 }
- 
+
 /* ---------- food autocomplete ---------- */
-async function ensureFoods(){
-  if(foodsCache)return foodsCache;
-  try{const r=await api({action:"foods"});foodsCache=r.ok?r.items:[];}catch(_){foodsCache=[];}
-  return foodsCache;
+function ensureFoods(force){
+  if(foodsLoaded&&!force)return Promise.resolve(foodsCache);
+  if(foodsLoading)return foodsLoading;
+  foodsLoading=api({action:"foods"})
+    .then(r=>{foodsCache=(r&&r.ok)?r.items:foodsCache;foodsLoaded=true;foodsLoading=null;return foodsCache;})
+    .catch(()=>{foodsLoading=null;return foodsCache;});
+  return foodsLoading;
 }
 const itemInput=document.getElementById("mItem");
 const suggestBox=document.getElementById("suggest");
-itemInput.addEventListener("input",()=>{
-  const q=itemInput.value.trim().toLowerCase();
-  if(q.length<2||!foodsCache){suggestBox.style.display="none";return;}
+function renderSuggest(q){
   const matches=foodsCache.filter(f=>f.item.toLowerCase().indexOf(q)>=0).slice(0,8);
   if(!matches.length){suggestBox.style.display="none";return;}
   suggestBox._matches=matches;
   suggestBox.innerHTML=matches.map((f,i)=>'<div class="sg" data-i="'+i+'"><span>'+esc(f.item)+'</span>'+
     '<span class="sgcal">'+Math.round(f.calories)+(f.per100?" /100g":"")+'</span></div>').join("");
-  suggestBox.querySelectorAll(".sg").forEach(el=>el.addEventListener("mousedown",ev=>{
+  suggestBox.querySelectorAll(".sg").forEach(el=>el.addEventListener("pointerdown",ev=>{
     ev.preventDefault();applyFood(suggestBox._matches[+el.dataset.i]);}));
   suggestBox.style.display="block";
+}
+itemInput.addEventListener("input",async()=>{
+  const q=itemInput.value.trim().toLowerCase();
+  if(q.length<2){suggestBox.style.display="none";return;}
+  if(!foodsLoaded)await ensureFoods();              // load lazily if the prefetch hasn't finished
+  if(itemInput.value.trim().toLowerCase()!==q)return; // user kept typing while we loaded
+  renderSuggest(q);
 });
 itemInput.addEventListener("blur",()=>setTimeout(()=>suggestBox.style.display="none",150));
 function applyFood(f){
@@ -430,7 +444,7 @@ function applyFood(f){
   }
   suggestBox.style.display="none";
 }
- 
+
 /* ---------- preview modal ---------- */
 function defaultGroup(){const h=new Date().getHours();return h<11?"breakfast":h<15?"lunch":h<18?"snacks":"dinner";}
 function openPreview(o){
@@ -459,15 +473,20 @@ document.getElementById("mLog").onclick=async()=>{
     protein:num(v("mProtein")),fiber:num(v("mFiber")),sugar:num(v("mSugar")),date:fmt(currentDate)};
   document.getElementById("mLog").disabled=true;
   try{const r=await api(payload);if(!r.ok)throw new Error(r.error||"failed");
-    foodsCache=null;closeModal();toast("✓ Logged "+r.item);loadDay();}
+    foodsCache.unshift({item:payload.item,barcode:payload.barcode,per100:false,
+      calories:Number(payload.calories)||0,carbs:Number(payload.carbs)||0,fat:Number(payload.fat)||0,
+      protein:Number(payload.protein)||0,fiber:Number(payload.fiber)||0,sugar:Number(payload.sugar)||0});
+    ensureFoods(true);                       // resync the list in the background
+    closeModal();toast("✓ Logged "+r.item);loadDay();}
   catch(e){toast("Log failed: "+e.message,true);}
   finally{document.getElementById("mLog").disabled=false;}
 };
 function num(s){if(s==null)return"";const m=String(s).replace(",",".").match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):"";}
- 
+
 /* ---------- copy modal ---------- */
 function openCopy(group){copyGroupKey=group;copyDate=new Date();
   document.getElementById("cTitle").textContent="Copy "+group+" to…";
+  document.getElementById("cGroup").value=group;
   renderCopyLabel();document.getElementById("copyModal").classList.add("show");}
 function renderCopyLabel(){document.getElementById("cLabel").textContent=dayLabel(copyDate);}
 document.getElementById("cPrev").onclick=()=>{copyDate.setDate(copyDate.getDate()-1);renderCopyLabel();};
@@ -475,16 +494,17 @@ document.getElementById("cNext").onclick=()=>{copyDate.setDate(copyDate.getDate(
 document.getElementById("cCancel").onclick=()=>document.getElementById("copyModal").classList.remove("show");
 document.getElementById("copyModal").onclick=e=>{if(e.target.id==="copyModal")e.currentTarget.classList.remove("show");};
 document.getElementById("cConfirm").onclick=async()=>{
-  const target=fmt(copyDate);document.getElementById("cConfirm").disabled=true;
-  try{const r=await api({action:"copy",date:fmt(currentDate),group:copyGroupKey,target});
+  const target=fmt(copyDate),targetGroup=document.getElementById("cGroup").value;
+  document.getElementById("cConfirm").disabled=true;
+  try{const r=await api({action:"copy",date:fmt(currentDate),group:copyGroupKey,target,targetGroup});
     if(!r.ok)throw new Error(r.error);
     document.getElementById("copyModal").classList.remove("show");
-    toast("Copied "+r.count+" item(s) to "+dayLabel(copyDate).toLowerCase());
+    toast("Copied "+r.count+" item(s) to "+targetGroup+" · "+dayLabel(copyDate).toLowerCase());
     if(target===fmt(currentDate))loadDay();
   }catch(e){toast("Copy failed: "+e.message,true);}
   finally{document.getElementById("cConfirm").disabled=false;}
 };
- 
+
 /* ---------- init ---------- */
 document.getElementById("prevDay").onclick=()=>shiftDay(-1);
 document.getElementById("nextDay").onclick=()=>shiftDay(1);
