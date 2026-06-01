@@ -6,33 +6,31 @@
 <title>Food Tracker</title>
 <style>
   :root{
-    --bg:#f7f7f8; --card:#fff; --line:#e4e4e7; --ink:#1c1c1e; --muted:#8a8a8e;
-    --accent:#1a73e8; --ok:#137333; --err:#c5221f;
-    --breakfast:#f6a609; --lunch:#2fa84f; --snacks:#8e5bd0; --dinner:#2b7de9;
+    --bg:#121316; --card:#1d1e22; --card2:#26272c; --line:#34353b; --ink:#ECECEF; --muted:#9b9ba3;
+    --accent:#4c8dff; --ok:#34c759; --err:#ff6b62;
+    --breakfast:#ffb020; --lunch:#3ecf6a; --snacks:#b07bff; --dinner:#4c8dff;
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);
-       max-width:520px;margin:0 auto;padding:0 12px 90px;-webkit-tap-highlight-color:transparent}
-  h1{font-size:1.25rem;margin:14px 4px 6px}
+  body{margin:0 auto;max-width:520px;padding:0 12px 92px;background:var(--bg);color:var(--ink);
+       font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+  h1{font-size:1.25rem;margin:14px 4px 4px}
   .muted{color:var(--muted)} .err{color:var(--err)} .ok{color:var(--ok)}
   button{font:inherit;border:0;border-radius:10px;padding:.55rem .9rem;background:var(--accent);color:#fff;cursor:pointer}
-  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
-  input,select{font:inherit;padding:.5rem;border:1px solid var(--line);border-radius:8px;background:#fff;width:100%}
+  button.ghost{background:var(--card2);color:var(--ink)}
+  button:disabled{opacity:.5}
+  input,select{font:inherit;padding:.55rem;border:1px solid var(--line);border-radius:9px;background:var(--card2);color:var(--ink);width:100%}
  
-  /* Date nav */
   .datenav{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0}
-  .datenav button{background:#fff;color:var(--ink);border:1px solid var(--line);width:42px;height:42px;border-radius:50%;font-size:1.2rem}
+  .datenav button{background:var(--card2);color:var(--ink);width:42px;height:42px;border-radius:50%;font-size:1.25rem;padding:0}
   .datenav .label{font-weight:600;min-width:150px;text-align:center}
  
-  /* Mode tabs */
   .tabs{display:flex;gap:6px;margin:10px 0}
-  .tabs button{flex:1;background:#fff;color:var(--ink);border:1px solid var(--line)}
-  .tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .tabs button{flex:1;background:var(--card2);color:var(--ink);padding:.55rem .3rem;font-size:.92rem}
+  .tabs button.active{background:var(--accent);color:#fff}
   .panel{margin:8px 0}
-  video{width:100%;border-radius:12px;background:#000;aspect-ratio:4/3;object-fit:cover}
+  video{width:100%;border-radius:12px;background:#000;aspect-ratio:4/3;object-fit:cover;margin-top:8px}
   .bigbtn{width:100%;padding:.9rem;font-size:1.05rem}
  
-  /* Board */
   .group{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}
   .group h2{display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;font-size:1rem;border-left:5px solid var(--line)}
   .group[data-group=breakfast] h2{border-color:var(--breakfast)}
@@ -40,44 +38,45 @@
   .group[data-group=snacks] h2{border-color:var(--snacks)}
   .group[data-group=dinner] h2{border-color:var(--dinner)}
   .group h2 .sub{margin-left:auto;color:var(--muted);font-weight:500;font-size:.85rem}
-  .group h2 .copy{background:#fff;color:var(--accent);border:1px solid var(--line);padding:.25rem .5rem;font-size:.8rem;border-radius:8px}
-  .list{min-height:38px;padding:4px 8px 10px}
-  .item{display:flex;align-items:center;gap:10px;background:#fafafa;border:1px solid var(--line);border-radius:10px;
-        padding:8px 10px;margin:6px 0;touch-action:none}
+  .group h2 .copy{background:var(--card2);color:var(--accent);padding:.28rem .55rem;font-size:.8rem}
+  .list{min-height:40px;padding:4px 8px 10px}
+  .item{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:10px;
+        padding:9px 10px;margin:6px 0}
   .item .nm{flex:1;font-size:.95rem}
   .item .cal{color:var(--muted);font-size:.85rem;white-space:nowrap}
-  .item .del{background:transparent;color:var(--muted);padding:0 6px;font-size:1.2rem;line-height:1}
+  .item .del{background:transparent;color:var(--muted);padding:0 8px;font-size:1.3rem;line-height:1;touch-action:auto}
   .empty{color:var(--muted);font-size:.85rem;padding:4px 6px}
-  .sortable-ghost{opacity:.4}
+  .sortable-ghost{opacity:.35}
  
-  /* Totals bar */
-  .totals{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
-          max-width:520px;margin:0 auto;padding:8px 14px;display:flex;justify-content:space-between;font-size:.85rem}
-  .totals b{font-size:1.05rem}
+  .recent{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:11px;
+           padding:11px 12px;margin:7px 0;cursor:pointer}
+  .recent .nm{flex:1} .recent .cal{color:var(--muted);font-size:.85rem}
  
-  /* Modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:20}
+  .totals{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--card);
+          border-top:1px solid var(--line);padding:9px 16px;display:flex;justify-content:space-between;font-size:.85rem}
+  .totals b{font-size:1.05rem;color:var(--ink)}
+ 
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:20}
   .modal.show{display:flex}
-  .sheet{background:#fff;width:100%;max-width:520px;margin:0 auto;border-radius:16px 16px 0 0;padding:16px;max-height:92vh;overflow:auto}
-  .sheet h3{margin:.2rem 0 .8rem}
+  .sheet{background:var(--card);width:100%;max-width:520px;margin:0 auto;border-radius:16px 16px 0 0;padding:16px;max-height:92vh;overflow:auto}
+  .sheet h3{margin:.2rem 0 .9rem}
   .field{margin:8px 0}
-  .field label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:3px}
+  .field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:3px}
   .macros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .row{display:flex;gap:8px;margin-top:14px}
   .row button{flex:1;padding:.8rem}
  
-  /* Toast */
-  #toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;
-         padding:.6rem 1rem;border-radius:10px;font-size:.9rem;opacity:0;transition:opacity .25s;z-index:30;pointer-events:none}
-  #toast.show{opacity:.96}
+  #toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:#000;color:#fff;
+         padding:.6rem 1rem;border-radius:10px;font-size:.9rem;opacity:0;transition:opacity .25s;z-index:30;pointer-events:none;border:1px solid var(--line)}
+  #toast.show{opacity:.97}
 </style>
 </head>
 <body>
  
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbx9KHL1PRbK-o689d-JkPxM8Lf6UJQ8yUQ4jA5IXGdrD3hFngBgNx9Sk4q5UhBXsyzc/exec";
-  const API_KEY = "";   // only if you set CONFIG.API_KEY in the script
+  const API_URL = "https://script.google.com/macros/s/AKfycbyZiM96oSsAHg8qqPUFMfGcCpi1zTSZCqpHNmLSWpd8eWI5JoulMYOZBjKqFI5B7tro/exec";
+  const API_KEY = "";
 </script>
 <!-- ============================================================= -->
  
@@ -93,19 +92,24 @@
   <button data-mode="scan" class="active">Scan</button>
   <button data-mode="photo">Photo</button>
   <button data-mode="manual">Manual</button>
+  <button data-mode="recents">Recents</button>
 </div>
  
 <div id="panel-scan" class="panel">
-  <video id="cam" autoplay playsinline muted></video>
-  <p class="muted" id="scanHint" style="font-size:.85rem">Point the camera at a barcode.</p>
+  <button class="bigbtn" id="camToggle">📷 Start camera</button>
+  <video id="cam" autoplay playsinline muted style="display:none"></video>
+  <p class="muted" id="scanHint" style="font-size:.85rem">Tap to open the camera, then point it at a barcode.</p>
 </div>
 <div id="panel-photo" class="panel" style="display:none">
-  <button class="ghost bigbtn" id="photoBtn">📷 Photograph nutrition label</button>
-  <p class="muted" style="font-size:.85rem">OCR pre-fills the form — check the numbers before logging.</p>
+  <button class="ghost bigbtn" id="photoBtn">📷 Photograph label</button>
+  <p class="muted" style="font-size:.85rem">Reads the calories off the label (kcal). Add the other values by hand if you want them.</p>
   <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
 </div>
 <div id="panel-manual" class="panel" style="display:none">
   <button class="bigbtn" id="manualBtn">＋ New manual entry</button>
+</div>
+<div id="panel-recents" class="panel" style="display:none">
+  <div id="recentsList"><p class="muted">…</p></div>
 </div>
  
 <div id="board"><p class="muted">Loading…</p></div>
@@ -142,282 +146,278 @@
   </div>
 </div>
  
+<!-- Copy-to modal with date stepper -->
+<div class="modal" id="copyModal">
+  <div class="sheet">
+    <h3 id="cTitle">Copy to…</h3>
+    <div class="datenav">
+      <button id="cPrev">&lsaquo;</button>
+      <span class="label" id="cLabel">Today</span>
+      <button id="cNext">&rsaquo;</button>
+    </div>
+    <div class="row">
+      <button class="ghost" id="cCancel">Cancel</button>
+      <button id="cConfirm">Copy here</button>
+    </div>
+  </div>
+</div>
+ 
 <div id="toast"></div>
  
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
-const GROUPS = [["breakfast","Breakfast"],["lunch","Lunch"],["snacks","Snacks"],["dinner","Dinner"]];
-let currentDate = new Date();
-let scanning = false, lastScan = "", lastScanAt = 0;
-let previewBase = null, previewBarcode = "";
+const GROUPS=[["breakfast","Breakfast"],["lunch","Lunch"],["snacks","Snacks"],["dinner","Dinner"]];
+let currentDate=new Date();
+let scanning=false,lastScan="",lastScanAt=0;
+let previewBase=null,previewBarcode="";
+let copyGroupKey="",copyDate=new Date();
  
-/* ---------- JSONP helper (Promise-based) ---------- */
+/* ---------- JSONP ---------- */
 function api(params){
   return new Promise((resolve,reject)=>{
-    if(API_URL.indexOf("PASTE_")===0){ reject(new Error("Set API_URL at the top of index.html")); return; }
-    const cb = "cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
-    const s = document.createElement("script");
-    const to = setTimeout(()=>{cleanup();reject(new Error("timeout"));}, 25000);
-    function cleanup(){ clearTimeout(to); delete window[cb]; s.remove(); }
-    window[cb] = out => { cleanup(); resolve(out); };
-    const qs = Object.keys(params).map(k=>encodeURIComponent(k)+"="+encodeURIComponent(params[k])).join("&");
-    s.src = API_URL+"?"+qs+"&callback="+cb+(API_KEY?("&key="+encodeURIComponent(API_KEY)):"")+"&_="+Date.now();
-    s.onerror = ()=>{ cleanup(); reject(new Error("network")); };
+    if(API_URL.indexOf("PASTE_")===0){reject(new Error("Set API_URL at the top of index.html"));return;}
+    const cb="cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
+    const s=document.createElement("script");
+    const to=setTimeout(()=>{cleanup();reject(new Error("timeout"));},25000);
+    function cleanup(){clearTimeout(to);delete window[cb];s.remove();}
+    window[cb]=out=>{cleanup();resolve(out);};
+    const qs=Object.keys(params).map(k=>encodeURIComponent(k)+"="+encodeURIComponent(params[k])).join("&");
+    s.src=API_URL+"?"+qs+"&callback="+cb+(API_KEY?("&key="+encodeURIComponent(API_KEY)):"")+"&_="+Date.now();
+    s.onerror=()=>{cleanup();reject(new Error("network"));};
     document.body.appendChild(s);
   });
 }
  
-/* ---------- Date helpers ---------- */
-function fmt(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-function isSameDay(a,b){ return fmt(a)===fmt(b); }
-function dayLabel(d){
-  const t=new Date(), y=new Date(); y.setDate(t.getDate()-1);
-  if(isSameDay(d,t)) return "Today";
-  if(isSameDay(d,y)) return "Yesterday";
-  return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
-}
-function shiftDay(n){ currentDate.setDate(currentDate.getDate()+n); loadDay(); }
+/* ---------- dates ---------- */
+function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function sameDay(a,b){return fmt(a)===fmt(b);}
+function dayLabel(d){const t=new Date(),y=new Date();y.setDate(t.getDate()-1);
+  if(sameDay(d,t))return "Today"; if(sameDay(d,y))return "Yesterday";
+  return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});}
+function shiftDay(n){currentDate.setDate(currentDate.getDate()+n);loadDay();}
  
-/* ---------- Toast ---------- */
+/* ---------- toast ---------- */
 let toastTimer;
-function toast(msg,isErr){
-  const el=document.getElementById("toast");
-  el.textContent=msg; el.style.background=isErr?"#7a1f1b":"#1c1c1e"; el.classList.add("show");
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove("show"),2600);
-}
+function toast(msg,isErr){const el=document.getElementById("toast");el.textContent=msg;
+  el.style.borderColor=isErr?"var(--err)":"var(--line)";el.classList.add("show");
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600);}
  
-/* ---------- Day board ---------- */
+/* ---------- day board ---------- */
 async function loadDay(){
-  document.getElementById("dateLabel").textContent = dayLabel(currentDate);
-  const board=document.getElementById("board");
-  board.innerHTML='<p class="muted">Loading…</p>';
-  try{
-    const data=await api({action:"day",date:fmt(currentDate)});
-    if(!data.ok) throw new Error(data.error||"failed");
-    renderDay(data);
-  }catch(e){ board.innerHTML='<p class="err">Could not load: '+e.message+'</p>'; }
+  document.getElementById("dateLabel").textContent=dayLabel(currentDate);
+  const board=document.getElementById("board");board.innerHTML='<p class="muted">Loading…</p>';
+  try{const data=await api({action:"day",date:fmt(currentDate)});
+    if(!data.ok)throw new Error(data.error||"failed");renderDay(data);
+  }catch(e){board.innerHTML='<p class="err">Could not load: '+e.message+'</p>';}
 }
- 
 function renderDay(data){
   const board=document.getElementById("board");
   const byGroup={breakfast:[],lunch:[],snacks:[],dinner:[]};
-  data.items.forEach(it=>{ (byGroup[it.group]||byGroup.snacks).push(it); });
+  data.items.forEach(it=>{(byGroup[it.group]||byGroup.snacks).push(it);});
   board.innerHTML="";
   GROUPS.forEach(([key,label])=>{
     const list=byGroup[key];
     const sub=Math.round(list.reduce((s,i)=>s+i.calories,0));
-    const sec=document.createElement("div");
-    sec.className="group"; sec.dataset.group=key;
-    sec.innerHTML=
-      '<h2>'+label+
-        '<span class="sub">'+sub+' kcal</span>'+
-        '<button class="copy" data-group="'+key+'">Copy to…</button>'+
-      '</h2>'+
+    const sec=document.createElement("div");sec.className="group";sec.dataset.group=key;
+    sec.innerHTML='<h2>'+label+'<span class="sub">'+sub+' kcal</span>'+
+      '<button class="copy" data-group="'+key+'">Copy to…</button></h2>'+
       '<div class="list" data-group="'+key+'">'+
-        (list.length?list.map(itemHTML).join(""):'<div class="empty">— empty —</div>')+
-      '</div>';
+      (list.length?list.map(itemHTML).join(""):'<div class="empty">— empty —</div>')+'</div>';
     board.appendChild(sec);
   });
-  // totals
   const t=data.totals;
   document.getElementById("tCal").textContent=Math.round(t.calories);
   document.getElementById("tMacros").textContent="C "+Math.round(t.carbs)+" · F "+Math.round(t.fat)+" · P "+Math.round(t.protein);
   wireBoard();
 }
- 
-function itemHTML(it){
-  return '<div class="item" data-id="'+it.id+'">'+
-           '<span class="nm">'+escapeHTML(it.item)+'</span>'+
-           '<span class="cal">'+Math.round(it.calories)+' kcal</span>'+
-           '<button class="del" data-id="'+it.id+'" title="Remove">×</button>'+
-         '</div>';
-}
-function escapeHTML(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function itemHTML(it){return '<div class="item" data-id="'+it.id+'">'+
+  '<span class="nm">'+esc(it.item)+'</span><span class="cal">'+Math.round(it.calories)+' kcal</span>'+
+  '<button class="del" data-id="'+it.id+'" title="Remove">×</button></div>';}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
  
 function wireBoard(){
-  // delete buttons
-  document.querySelectorAll(".del").forEach(b=>b.onclick=async e=>{
+  document.querySelectorAll(".del").forEach(b=>b.addEventListener("click",async e=>{
     e.stopPropagation();
     const id=b.dataset.id;
-    if(!id){ toast("Old entry without ID — edit it in the sheet",true); return; }
-    if(!confirm("Remove this entry?")) return;
-    try{ const r=await api({action:"delete",id}); if(!r.ok) throw new Error(r.error); loadDay(); }
-    catch(err){ toast("Delete failed: "+err.message,true); }
-  });
-  // copy-to buttons
-  document.querySelectorAll(".copy").forEach(b=>b.onclick=async ()=>{
-    const group=b.dataset.group;
-    const next=new Date(currentDate); next.setDate(next.getDate()+1);
-    const target=prompt("Copy "+group+" to which date? (YYYY-MM-DD)", fmt(next));
-    if(!target) return;
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(target)){ toast("Use format YYYY-MM-DD",true); return; }
-    try{
-      const r=await api({action:"copy",date:fmt(currentDate),group,target});
-      if(!r.ok) throw new Error(r.error);
-      toast("Copied "+r.count+" item(s) to "+target);
-      if(target===fmt(currentDate)) loadDay();
-    }catch(err){ toast("Copy failed: "+err.message,true); }
-  });
-  // drag & drop between meals (touch-friendly via SortableJS)
+    if(!id){toast("Old entry without ID — delete it in the sheet",true);return;}
+    if(!confirm("Remove this entry?"))return;
+    try{const r=await api({action:"delete",id});if(!r.ok)throw new Error(r.error);toast("Removed");loadDay();}
+    catch(err){toast("Delete failed: "+err.message,true);}
+  }));
+  document.querySelectorAll(".copy").forEach(b=>b.addEventListener("click",()=>openCopy(b.dataset.group)));
   document.querySelectorAll(".list").forEach(listEl=>{
     new Sortable(listEl,{
-      group:"meals", animation:150, ghostClass:"sortable-ghost",
+      group:"meals",animation:150,ghostClass:"sortable-ghost",
+      filter:".del",preventOnFilter:false,           // taps on × are clicks, not drags
+      delay:120,delayOnTouchOnly:true,               // quick tap = click; hold = drag
       onAdd:async evt=>{
-        const id=evt.item.dataset.id;
-        const newGroup=evt.to.dataset.group;
-        if(!id){ toast("Old entry without ID — can't move",true); loadDay(); return; }
-        try{ const r=await api({action:"move",id,group:newGroup}); if(!r.ok) throw new Error(r.error); }
-        catch(err){ toast("Move failed: "+err.message,true); }
+        const id=evt.item.dataset.id,newGroup=evt.to.dataset.group;
+        if(!id){toast("Old entry without ID — can't move",true);loadDay();return;}
+        try{const r=await api({action:"move",id,group:newGroup});if(!r.ok)throw new Error(r.error);}
+        catch(err){toast("Move failed: "+err.message,true);}
         loadDay();
       }
     });
   });
 }
  
-/* ---------- Modes ---------- */
+/* ---------- modes ---------- */
 function setMode(mode){
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
-  document.getElementById("panel-scan").style.display  = mode==="scan"?"":"none";
-  document.getElementById("panel-photo").style.display = mode==="photo"?"":"none";
-  document.getElementById("panel-manual").style.display= mode==="manual"?"":"none";
-  if(mode==="scan") startScan(); else stopScan();
+  ["scan","photo","manual","recents"].forEach(m=>document.getElementById("panel-"+m).style.display=(m===mode?"":"none"));
+  if(mode!=="scan")stopScan();
+  if(mode==="recents")loadRecents();
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
  
-/* ---------- Scan mode ---------- */
-let stream=null, detector=null, scanTimer=null;
+/* ---------- scan (camera only on demand) ---------- */
+let stream=null,detector=null,scanTimer=null;
+document.getElementById("camToggle").onclick=()=>{ stream?stopScan():startScan(); };
 async function startScan(){
   const hint=document.getElementById("scanHint");
-  if(!("BarcodeDetector" in window)){ hint.textContent="Camera scan unsupported on this browser — use Photo or Manual."; hint.className="err"; return; }
-  if(!detector) detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});
+  if(!("BarcodeDetector" in window)){hint.textContent="Barcode scanning unsupported here — use Photo or Manual.";hint.className="err";return;}
+  if(!detector)detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-    const v=document.getElementById("cam"); v.srcObject=stream; scanning=true;
+    const v=document.getElementById("cam");v.srcObject=stream;v.style.display="block";
+    document.getElementById("camToggle").textContent="⏹ Stop camera";
+    hint.textContent="Point at a barcode.";hint.className="muted";scanning=true;
     scanTimer=setInterval(async()=>{
-      if(!scanning) return;
-      try{
-        const codes=await detector.detect(v);
-        if(codes.length){
-          const code=codes[0].rawValue, now=Date.now();
-          if(code!==lastScan || now-lastScanAt>4000){ lastScan=code; lastScanAt=now; onBarcode(code); }
-        }
+      if(!scanning)return;
+      try{const codes=await detector.detect(v);
+        if(codes.length){const code=codes[0].rawValue,now=Date.now();
+          if(code!==lastScan||now-lastScanAt>4000){lastScan=code;lastScanAt=now;onBarcode(code);}}
       }catch(_){}
     },600);
-  }catch(err){ hint.textContent="Camera error: "+err.message; hint.className="err"; }
+  }catch(err){hint.textContent="Camera error: "+err.message;hint.className="err";}
 }
 function stopScan(){
-  scanning=false; if(scanTimer){clearInterval(scanTimer);scanTimer=null;}
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  scanning=false;if(scanTimer){clearInterval(scanTimer);scanTimer=null;}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  const v=document.getElementById("cam");v.style.display="none";v.srcObject=null;
+  document.getElementById("camToggle").textContent="📷 Start camera";
 }
- 
 async function onBarcode(code){
-  scanning=false;                       // pause while we look up + preview
-  toast("Looking up "+code+"…");
-  try{
-    const r=await api({action:"lookup",barcode:code});
-    if(r.ok){
-      openPreview({title:"Log scanned item",item:r.item,base:r.per100,barcode:r.barcode});
-    }else{
-      toast(r.error||"Not found — enter manually",true);
-      openPreview({title:"Not found — enter manually",item:"",barcode:code});
-    }
-  }catch(e){ toast("Lookup failed: "+e.message,true); scanning=true; }
+  scanning=false;toast("Looking up "+code+"…");
+  try{const r=await api({action:"lookup",barcode:code});
+    if(r.ok)openPreview({title:"Log scanned item",item:r.item,base:r.per100,barcode:r.barcode});
+    else{toast(r.error||"Not found",true);openPreview({title:"Not found — enter manually",item:"",barcode:code});}
+  }catch(e){toast("Lookup failed: "+e.message,true);scanning=true;}
 }
  
-/* ---------- Photo (OCR) mode ---------- */
+/* ---------- photo (calories only, intl) ---------- */
 document.getElementById("photoBtn").onclick=()=>document.getElementById("photoInput").click();
 document.getElementById("photoInput").onchange=async e=>{
-  const file=e.target.files[0]; if(!file) return;
-  e.target.value="";
-  toast("Reading label… (first time downloads the OCR engine)");
-  try{
-    const text=await runOCR(file);
-    openPreview({title:"From label — check the numbers",item:guessName(text),macros:parseLabel(text)});
-  }catch(err){ toast("OCR failed: "+err.message+" — enter manually",true); openPreview({title:"Enter manually",item:""}); }
+  const file=e.target.files[0];if(!file)return;e.target.value="";
+  toast("Reading label… (first use downloads the OCR engine)");
+  try{const text=await runOCR(file);
+    openPreview({title:"From label — check calories",item:guessName(text),macros:{calories:parseCalories(text)}});
+  }catch(err){toast("OCR failed: "+err.message,true);openPreview({title:"Enter manually",item:""});}
 };
 let tessLoading=null;
 function loadTesseract(){
-  if(window.Tesseract) return Promise.resolve();
-  if(tessLoading) return tessLoading;
-  tessLoading=new Promise((res,rej)=>{
-    const s=document.createElement("script");
+  if(window.Tesseract)return Promise.resolve();
+  if(tessLoading)return tessLoading;
+  tessLoading=new Promise((res,rej)=>{const s=document.createElement("script");
     s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
-    s.onload=res; s.onerror=()=>rej(new Error("could not load OCR library"));
-    document.head.appendChild(s);
-  });
+    s.onload=res;s.onerror=()=>rej(new Error("could not load OCR library"));document.head.appendChild(s);});
   return tessLoading;
 }
-async function runOCR(file){
-  await loadTesseract();
-  const {data}=await Tesseract.recognize(file,"eng",{logger:()=>{}});
-  return data.text||"";
-}
-function num(s){ if(s==null) return ""; const m=String(s).replace(",",".").match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):""; }
-function near(text,re){ // first number on the same line as a keyword
-  const lines=text.split(/\n/);
-  for(const ln of lines){ if(re.test(ln)){ const m=ln.replace(",",".").match(/(\d+(\.\d+)?)/); if(m) return parseFloat(m[1]); } }
+async function runOCR(file){await loadTesseract();
+  const {data}=await Tesseract.recognize(file,"eng",{logger:()=>{}});return data.text||"";}
+function parseCalories(text){
+  const t=text.toLowerCase().replace(/,/g,".");
+  let m=t.match(/(\d+(?:\.\d+)?)\s*kcal/);            if(m)return parseFloat(m[1]); // "539 kcal" (EU/DE)
+  m=t.match(/kcal[^0-9]{0,12}(\d+(?:\.\d+)?)/);        if(m)return parseFloat(m[1]); // "kcal: 539"
+  m=t.match(/calor(?:ies|ie)?[^0-9]{0,12}(\d+(?:\.\d+)?)/); if(m)return parseFloat(m[1]); // US "Calories 250"
+  // German "Energie"/"Brennwert" line listing kJ and kcal -> kcal is the smaller number
+  for(const ln of t.split(/\n/)){
+    if(/energ|brennwert/.test(ln)){const nums=(ln.match(/\d+(?:\.\d+)?/g)||[]).map(parseFloat);
+      if(nums.length)return Math.min.apply(null,nums);}
+  }
   return "";
 }
-function parseLabel(text){
-  const t=text.toLowerCase();
-  // calories: prefer an explicit kcal figure
-  let cal=""; const k=t.replace(",",".").match(/(\d+(\.\d+)?)\s*k?cal/); if(k) cal=parseFloat(k[1]); else cal=near(t,/energ|calor/);
-  return { calories:cal, carbs:near(t,/carbo/), fat:near(t,/(^|[^a-z])fat/),
-           protein:near(t,/protein/), fiber:near(t,/fib(re|er)/), sugar:near(t,/sugar/) };
-}
-function guessName(text){ const ln=(text||"").split(/\n/).map(s=>s.trim()).filter(s=>s.length>2); return ln[0]?ln[0].slice(0,40):""; }
+function guessName(text){const ln=(text||"").split(/\n/).map(s=>s.trim()).filter(s=>s.length>2);return ln[0]?ln[0].slice(0,40):"";}
  
-/* ---------- Manual ---------- */
+/* ---------- manual ---------- */
 document.getElementById("manualBtn").onclick=()=>openPreview({title:"New manual entry",item:""});
  
-/* ---------- Preview / edit modal ---------- */
-function defaultGroup(){ const h=new Date().getHours(); return h<11?"breakfast":h<15?"lunch":h<18?"snacks":"dinner"; }
-function openPreview(opts){
-  previewBase=opts.base||null; previewBarcode=opts.barcode||"";
-  document.getElementById("mTitle").textContent=opts.title||"Log food";
-  document.getElementById("mItem").value=opts.item||"";
+/* ---------- recents ---------- */
+async function loadRecents(){
+  const el=document.getElementById("recentsList");el.innerHTML='<p class="muted">Loading…</p>';
+  try{const r=await api({action:"recents",limit:20});
+    if(!r.ok)throw new Error(r.error);
+    if(!r.items.length){el.innerHTML='<p class="muted">Nothing logged yet.</p>';return;}
+    el.innerHTML="";
+    r.items.forEach(it=>{
+      const d=document.createElement("div");d.className="recent";
+      d.innerHTML='<span class="nm">'+esc(it.item)+'</span><span class="cal">'+Math.round(it.calories)+' kcal</span>';
+      d.onclick=()=>openPreview({title:"Add to log",item:it.item,barcode:it.barcode,
+        macros:{calories:it.calories,carbs:it.carbs,fat:it.fat,protein:it.protein,fiber:it.fiber,sugar:it.sugar}});
+      el.appendChild(d);
+    });
+  }catch(e){el.innerHTML='<p class="err">Could not load recents: '+e.message+'</p>';}
+}
+ 
+/* ---------- preview modal ---------- */
+function defaultGroup(){const h=new Date().getHours();return h<11?"breakfast":h<15?"lunch":h<18?"snacks":"dinner";}
+function openPreview(o){
+  previewBase=o.base||null;previewBarcode=o.barcode||"";
+  document.getElementById("mTitle").textContent=o.title||"Log food";
+  document.getElementById("mItem").value=o.item||"";
   document.getElementById("mGroup").value=defaultGroup();
   document.getElementById("gramsField").style.display=previewBase?"":"none";
   document.getElementById("mGrams").value=100;
-  const m=opts.macros||{};
-  const src=previewBase?scaled(previewBase,100):m;
-  setMacroFields(src);
+  setMacros(previewBase?scaled(previewBase,100):(o.macros||{}));
   document.getElementById("modal").classList.add("show");
 }
-function setMacroFields(o){
-  document.getElementById("mCalories").value=fix(o.calories);
-  document.getElementById("mCarbs").value=fix(o.carbs);
-  document.getElementById("mFat").value=fix(o.fat);
-  document.getElementById("mProtein").value=fix(o.protein);
-  document.getElementById("mFiber").value=fix(o.fiber);
-  document.getElementById("mSugar").value=fix(o.sugar);
-}
-function fix(v){ return (v===""||v==null||isNaN(v))?"":Math.round(v*10)/10; }
-function scaled(base,g){ const f=g/100; return {calories:base.calories*f,carbs:base.carbs*f,fat:base.fat*f,protein:base.protein*f,fiber:base.fiber*f,sugar:base.sugar*f}; }
-document.getElementById("mGrams").oninput=()=>{ if(previewBase) setMacroFields(scaled(previewBase,parseFloat(document.getElementById("mGrams").value)||0)); };
-function closeModal(){ document.getElementById("modal").classList.remove("show"); if(document.querySelector('.tabs button.active').dataset.mode==="scan"){ scanning=true; } }
+function setMacros(o){["calories","carbs","fat","protein","fiber","sugar"].forEach(k=>{
+  document.getElementById("m"+k[0].toUpperCase()+k.slice(1)).value=fix(o[k]);});}
+function fix(v){return(v===""||v==null||isNaN(v))?"":Math.round(v*10)/10;}
+function scaled(b,g){const f=g/100;return{calories:b.calories*f,carbs:b.carbs*f,fat:b.fat*f,protein:b.protein*f,fiber:b.fiber*f,sugar:b.sugar*f};}
+document.getElementById("mGrams").oninput=()=>{if(previewBase)setMacros(scaled(previewBase,parseFloat(document.getElementById("mGrams").value)||0));};
+function closeModal(){document.getElementById("modal").classList.remove("show");
+  if(document.querySelector(".tabs button.active").dataset.mode==="scan"&&stream)scanning=true;}
 document.getElementById("mCancel").onclick=closeModal;
-document.getElementById("modal").onclick=e=>{ if(e.target.id==="modal") closeModal(); };
- 
+document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
 document.getElementById("mLog").onclick=async()=>{
   const v=id=>document.getElementById(id).value;
-  const payload={ action:"add", item:v("mItem")||"Unnamed", group:v("mGroup"), barcode:previewBarcode,
-    calories:num(v("mCalories")), carbs:num(v("mCarbs")), fat:num(v("mFat")),
-    protein:num(v("mProtein")), fiber:num(v("mFiber")), sugar:num(v("mSugar")),
-    date:fmt(currentDate) };
+  const payload={action:"add",item:v("mItem")||"Unnamed",group:v("mGroup"),barcode:previewBarcode,
+    calories:num(v("mCalories")),carbs:num(v("mCarbs")),fat:num(v("mFat")),
+    protein:num(v("mProtein")),fiber:num(v("mFiber")),sugar:num(v("mSugar")),date:fmt(currentDate)};
   document.getElementById("mLog").disabled=true;
-  try{
-    const r=await api(payload);
-    if(!r.ok) throw new Error(r.error||"failed");
-    closeModal(); toast("✓ Logged "+r.item); loadDay();
-  }catch(e){ toast("Log failed: "+e.message,true); }
-  finally{ document.getElementById("mLog").disabled=false; }
+  try{const r=await api(payload);if(!r.ok)throw new Error(r.error||"failed");
+    closeModal();toast("✓ Logged "+r.item);loadDay();}
+  catch(e){toast("Log failed: "+e.message,true);}
+  finally{document.getElementById("mLog").disabled=false;}
+};
+function num(s){if(s==null)return"";const m=String(s).replace(",",".").match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):"";}
+ 
+/* ---------- copy modal (date stepper) ---------- */
+function openCopy(group){copyGroupKey=group;copyDate=new Date();
+  document.getElementById("cTitle").textContent="Copy "+group+" to…";
+  renderCopyLabel();document.getElementById("copyModal").classList.add("show");}
+function renderCopyLabel(){document.getElementById("cLabel").textContent=dayLabel(copyDate);}
+document.getElementById("cPrev").onclick=()=>{copyDate.setDate(copyDate.getDate()-1);renderCopyLabel();};
+document.getElementById("cNext").onclick=()=>{copyDate.setDate(copyDate.getDate()+1);renderCopyLabel();};
+document.getElementById("cCancel").onclick=()=>document.getElementById("copyModal").classList.remove("show");
+document.getElementById("copyModal").onclick=e=>{if(e.target.id==="copyModal")e.currentTarget.classList.remove("show");};
+document.getElementById("cConfirm").onclick=async()=>{
+  const target=fmt(copyDate);
+  document.getElementById("cConfirm").disabled=true;
+  try{const r=await api({action:"copy",date:fmt(currentDate),group:copyGroupKey,target});
+    if(!r.ok)throw new Error(r.error);
+    document.getElementById("copyModal").classList.remove("show");
+    toast("Copied "+r.count+" item(s) to "+dayLabel(copyDate).toLowerCase());
+    if(target===fmt(currentDate))loadDay();
+  }catch(e){toast("Copy failed: "+e.message,true);}
+  finally{document.getElementById("cConfirm").disabled=false;}
 };
  
-/* ---------- Init ---------- */
+/* ---------- init ---------- */
 document.getElementById("prevDay").onclick=()=>shiftDay(-1);
 document.getElementById("nextDay").onclick=()=>shiftDay(1);
-document.getElementById("dateLabel").onclick=()=>{ currentDate=new Date(); loadDay(); };
+document.getElementById("dateLabel").onclick=()=>{currentDate=new Date();loadDay();};
 setMode("scan");
 loadDay();
 </script>
