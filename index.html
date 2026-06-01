@@ -1,3 +1,6 @@
+
+raw
+Index · HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,16 +43,14 @@
   .group h2 .sub{margin-left:auto;color:var(--muted);font-weight:500;font-size:.85rem}
   .group h2 .copy{background:var(--card2);color:var(--accent);padding:.28rem .55rem;font-size:.8rem}
   .list{min-height:40px;padding:4px 8px 10px}
-  .item{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:10px;
-        padding:9px 10px;margin:6px 0}
+  .item{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin:6px 0}
   .item .nm{flex:1;font-size:.95rem}
   .item .cal{color:var(--muted);font-size:.85rem;white-space:nowrap}
   .item .del{background:transparent;color:var(--muted);padding:0 8px;font-size:1.3rem;line-height:1;touch-action:auto}
   .empty{color:var(--muted);font-size:.85rem;padding:4px 6px}
   .sortable-ghost{opacity:.35}
  
-  .recent{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:11px;
-           padding:11px 12px;margin:7px 0;cursor:pointer}
+  .recent{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin:7px 0;cursor:pointer}
   .recent .nm{flex:1} .recent .cal{color:var(--muted);font-size:.85rem}
  
   .totals{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--card);
@@ -60,11 +61,20 @@
   .modal.show{display:flex}
   .sheet{background:var(--card);width:100%;max-width:520px;margin:0 auto;border-radius:16px 16px 0 0;padding:16px;max-height:92vh;overflow:auto}
   .sheet h3{margin:.2rem 0 .9rem}
-  .field{margin:8px 0}
+  .field{margin:8px 0;position:relative}
   .field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:3px}
   .macros{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .row{display:flex;gap:8px;margin-top:14px}
   .row button{flex:1;padding:.8rem}
+ 
+  /* autocomplete */
+  .suggest{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--card2);border:1px solid var(--line);
+           border-radius:9px;margin-top:3px;max-height:230px;overflow:auto;display:none}
+  .suggest .sg{display:flex;justify-content:space-between;gap:8px;padding:10px 11px;cursor:pointer;border-bottom:1px solid var(--line)}
+  .suggest .sg:last-child{border-bottom:0}
+  .suggest .sg:hover{background:var(--accent);color:#fff}
+  .suggest .sgcal{color:var(--muted);font-size:.82rem;white-space:nowrap}
+  .suggest .sg:hover .sgcal{color:#e8eefc}
  
   #toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:#000;color:#fff;
          padding:.6rem 1rem;border-radius:10px;font-size:.9rem;opacity:0;transition:opacity .25s;z-index:30;pointer-events:none;border:1px solid var(--line)}
@@ -75,7 +85,7 @@
  
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbyZiM96oSsAHg8qqPUFMfGcCpi1zTSZCqpHNmLSWpd8eWI5JoulMYOZBjKqFI5B7tro/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbw8vCIFHwv-ha--AiKgKZlvciWw_ZEPWo2qcjMX1OIbPyIhHWRJDnDXXEer9WO0LnaE/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -102,7 +112,7 @@
 </div>
 <div id="panel-photo" class="panel" style="display:none">
   <button class="ghost bigbtn" id="photoBtn">📷 Photograph label</button>
-  <p class="muted" style="font-size:.85rem">Reads the calories off the label (kcal). Add the other values by hand if you want them.</p>
+  <p class="muted" style="font-size:.85rem">Reads the nutrition values off the label. Always check them before logging.</p>
   <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
 </div>
 <div id="panel-manual" class="panel" style="display:none">
@@ -123,7 +133,11 @@
 <div class="modal" id="modal">
   <div class="sheet">
     <h3 id="mTitle">Log food</h3>
-    <div class="field"><label>Item</label><input id="mItem" placeholder="e.g. Greek yogurt"></div>
+    <div class="field">
+      <label>Item</label>
+      <input id="mItem" placeholder="Start typing to search your foods…" autocomplete="off">
+      <div class="suggest" id="suggest"></div>
+    </div>
     <div class="field"><label>Meal</label>
       <select id="mGroup">
         <option value="breakfast">Breakfast</option><option value="lunch">Lunch</option>
@@ -171,6 +185,7 @@ let currentDate=new Date();
 let scanning=false,lastScan="",lastScanAt=0;
 let previewBase=null,previewBarcode="";
 let copyGroupKey="",copyDate=new Date();
+let foodsCache=null;
  
 /* ---------- JSONP ---------- */
 function api(params){
@@ -239,7 +254,7 @@ function wireBoard(){
   document.querySelectorAll(".del").forEach(b=>b.addEventListener("click",async e=>{
     e.stopPropagation();
     const id=b.dataset.id;
-    if(!id){toast("Old entry without ID — delete it in the sheet",true);return;}
+    if(!id){toast("This entry has no ID — run 'Set up / migrate sheets' once",true);return;}
     if(!confirm("Remove this entry?"))return;
     try{const r=await api({action:"delete",id});if(!r.ok)throw new Error(r.error);toast("Removed");loadDay();}
     catch(err){toast("Delete failed: "+err.message,true);}
@@ -248,11 +263,11 @@ function wireBoard(){
   document.querySelectorAll(".list").forEach(listEl=>{
     new Sortable(listEl,{
       group:"meals",animation:150,ghostClass:"sortable-ghost",
-      filter:".del",preventOnFilter:false,           // taps on × are clicks, not drags
-      delay:120,delayOnTouchOnly:true,               // quick tap = click; hold = drag
+      filter:".del",preventOnFilter:false,
+      delay:120,delayOnTouchOnly:true,
       onAdd:async evt=>{
         const id=evt.item.dataset.id,newGroup=evt.to.dataset.group;
-        if(!id){toast("Old entry without ID — can't move",true);loadDay();return;}
+        if(!id){toast("Entry has no ID — can't move",true);loadDay();return;}
         try{const r=await api({action:"move",id,group:newGroup});if(!r.ok)throw new Error(r.error);}
         catch(err){toast("Move failed: "+err.message,true);}
         loadDay();
@@ -305,13 +320,13 @@ async function onBarcode(code){
   }catch(e){toast("Lookup failed: "+e.message,true);scanning=true;}
 }
  
-/* ---------- photo (calories only, intl) ---------- */
+/* ---------- photo (full label OCR, German + English) ---------- */
 document.getElementById("photoBtn").onclick=()=>document.getElementById("photoInput").click();
 document.getElementById("photoInput").onchange=async e=>{
   const file=e.target.files[0];if(!file)return;e.target.value="";
   toast("Reading label… (first use downloads the OCR engine)");
   try{const text=await runOCR(file);
-    openPreview({title:"From label — check calories",item:guessName(text),macros:{calories:parseCalories(text)}});
+    openPreview({title:"From label — check the values",item:guessName(text),macros:parseLabel(text)});
   }catch(err){toast("OCR failed: "+err.message,true);openPreview({title:"Enter manually",item:""});}
 };
 let tessLoading=null;
@@ -324,23 +339,46 @@ function loadTesseract(){
   return tessLoading;
 }
 async function runOCR(file){await loadTesseract();
-  const {data}=await Tesseract.recognize(file,"eng",{logger:()=>{}});return data.text||"";}
-function parseCalories(text){
-  const t=text.toLowerCase().replace(/,/g,".");
-  let m=t.match(/(\d+(?:\.\d+)?)\s*kcal/);            if(m)return parseFloat(m[1]); // "539 kcal" (EU/DE)
-  m=t.match(/kcal[^0-9]{0,12}(\d+(?:\.\d+)?)/);        if(m)return parseFloat(m[1]); // "kcal: 539"
-  m=t.match(/calor(?:ies|ie)?[^0-9]{0,12}(\d+(?:\.\d+)?)/); if(m)return parseFloat(m[1]); // US "Calories 250"
-  // German "Energie"/"Brennwert" line listing kJ and kcal -> kcal is the smaller number
-  for(const ln of t.split(/\n/)){
-    if(/energ|brennwert/.test(ln)){const nums=(ln.match(/\d+(?:\.\d+)?/g)||[]).map(parseFloat);
-      if(nums.length)return Math.min.apply(null,nums);}
+  const {data}=await Tesseract.recognize(file,"deu+eng",{logger:()=>{}});return data.text||"";}
+ 
+// First number on the keyword line, or the line just below it (handles wrapped columns).
+function near(text,re){
+  const lines=text.split(/\n/);
+  for(let i=0;i<lines.length;i++){
+    if(re.test(lines[i])){
+      for(let j=i;j<=i+1&&j<lines.length;j++){
+        const m=lines[j].match(/(\d+(?:\.\d+)?)/);
+        if(m)return parseFloat(m[1]);
+      }
+    }
   }
   return "";
+}
+function parseCalories(t){
+  let m=t.match(/(\d+(?:\.\d+)?)\s*kcal/);                 if(m)return parseFloat(m[1]);
+  m=t.match(/kcal[^0-9]{0,12}(\d+(?:\.\d+)?)/);             if(m)return parseFloat(m[1]);
+  m=t.match(/calor(?:ies|ie)?[^0-9]{0,12}(\d+(?:\.\d+)?)/); if(m)return parseFloat(m[1]);
+  for(const ln of t.split(/\n/)){
+    if(/energ|brennwert/.test(ln)){const nums=(ln.match(/\d+(?:\.\d+)?/g)||[]).map(parseFloat);
+      if(nums.length)return Math.min.apply(null,nums);}   // kcal is the smaller of kJ/kcal
+  }
+  return "";
+}
+function parseLabel(text){
+  const t=text.toLowerCase().replace(/,/g,".");           // German uses comma decimals
+  return {
+    calories: parseCalories(t),
+    fat:      near(t,/fett|tuky|\bfat\b/),                 // first "fett" = total (saturated comes later)
+    carbs:    near(t,/kohlenhydrate|carbohydr|sacharid/),
+    sugar:    near(t,/zucker|sugar|cukr/),
+    fiber:    near(t,/ballaststoff|fib(?:er|re)|vl[aá]kn/),
+    protein:  near(t,/eiwei|protein|b[ií]lkov/)
+  };
 }
 function guessName(text){const ln=(text||"").split(/\n/).map(s=>s.trim()).filter(s=>s.length>2);return ln[0]?ln[0].slice(0,40):"";}
  
 /* ---------- manual ---------- */
-document.getElementById("manualBtn").onclick=()=>openPreview({title:"New manual entry",item:""});
+document.getElementById("manualBtn").onclick=()=>{ensureFoods();openPreview({title:"New manual entry",item:""});};
  
 /* ---------- recents ---------- */
 async function loadRecents(){
@@ -359,12 +397,46 @@ async function loadRecents(){
   }catch(e){el.innerHTML='<p class="err">Could not load recents: '+e.message+'</p>';}
 }
  
+/* ---------- food autocomplete ---------- */
+async function ensureFoods(){
+  if(foodsCache)return foodsCache;
+  try{const r=await api({action:"foods"});foodsCache=r.ok?r.items:[];}catch(_){foodsCache=[];}
+  return foodsCache;
+}
+const itemInput=document.getElementById("mItem");
+const suggestBox=document.getElementById("suggest");
+itemInput.addEventListener("input",()=>{
+  const q=itemInput.value.trim().toLowerCase();
+  if(q.length<2||!foodsCache){suggestBox.style.display="none";return;}
+  const matches=foodsCache.filter(f=>f.item.toLowerCase().indexOf(q)>=0).slice(0,8);
+  if(!matches.length){suggestBox.style.display="none";return;}
+  suggestBox._matches=matches;
+  suggestBox.innerHTML=matches.map((f,i)=>'<div class="sg" data-i="'+i+'"><span>'+esc(f.item)+'</span>'+
+    '<span class="sgcal">'+Math.round(f.calories)+(f.per100?" /100g":"")+'</span></div>').join("");
+  suggestBox.querySelectorAll(".sg").forEach(el=>el.addEventListener("mousedown",ev=>{
+    ev.preventDefault();applyFood(suggestBox._matches[+el.dataset.i]);}));
+  suggestBox.style.display="block";
+});
+itemInput.addEventListener("blur",()=>setTimeout(()=>suggestBox.style.display="none",150));
+function applyFood(f){
+  itemInput.value=f.item;previewBarcode=f.barcode||"";
+  if(f.per100){
+    previewBase={calories:f.calories,carbs:f.carbs,fat:f.fat,protein:f.protein,fiber:f.fiber,sugar:f.sugar};
+    document.getElementById("gramsField").style.display="";document.getElementById("mGrams").value=100;
+    setMacros(scaled(previewBase,100));
+  }else{
+    previewBase=null;document.getElementById("gramsField").style.display="none";
+    setMacros({calories:f.calories,carbs:f.carbs,fat:f.fat,protein:f.protein,fiber:f.fiber,sugar:f.sugar});
+  }
+  suggestBox.style.display="none";
+}
+ 
 /* ---------- preview modal ---------- */
 function defaultGroup(){const h=new Date().getHours();return h<11?"breakfast":h<15?"lunch":h<18?"snacks":"dinner";}
 function openPreview(o){
   previewBase=o.base||null;previewBarcode=o.barcode||"";
   document.getElementById("mTitle").textContent=o.title||"Log food";
-  document.getElementById("mItem").value=o.item||"";
+  itemInput.value=o.item||"";suggestBox.style.display="none";
   document.getElementById("mGroup").value=defaultGroup();
   document.getElementById("gramsField").style.display=previewBase?"":"none";
   document.getElementById("mGrams").value=100;
@@ -376,7 +448,7 @@ function setMacros(o){["calories","carbs","fat","protein","fiber","sugar"].forEa
 function fix(v){return(v===""||v==null||isNaN(v))?"":Math.round(v*10)/10;}
 function scaled(b,g){const f=g/100;return{calories:b.calories*f,carbs:b.carbs*f,fat:b.fat*f,protein:b.protein*f,fiber:b.fiber*f,sugar:b.sugar*f};}
 document.getElementById("mGrams").oninput=()=>{if(previewBase)setMacros(scaled(previewBase,parseFloat(document.getElementById("mGrams").value)||0));};
-function closeModal(){document.getElementById("modal").classList.remove("show");
+function closeModal(){document.getElementById("modal").classList.remove("show");suggestBox.style.display="none";
   if(document.querySelector(".tabs button.active").dataset.mode==="scan"&&stream)scanning=true;}
 document.getElementById("mCancel").onclick=closeModal;
 document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
@@ -387,13 +459,13 @@ document.getElementById("mLog").onclick=async()=>{
     protein:num(v("mProtein")),fiber:num(v("mFiber")),sugar:num(v("mSugar")),date:fmt(currentDate)};
   document.getElementById("mLog").disabled=true;
   try{const r=await api(payload);if(!r.ok)throw new Error(r.error||"failed");
-    closeModal();toast("✓ Logged "+r.item);loadDay();}
+    foodsCache=null;closeModal();toast("✓ Logged "+r.item);loadDay();}
   catch(e){toast("Log failed: "+e.message,true);}
   finally{document.getElementById("mLog").disabled=false;}
 };
 function num(s){if(s==null)return"";const m=String(s).replace(",",".").match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):"";}
  
-/* ---------- copy modal (date stepper) ---------- */
+/* ---------- copy modal ---------- */
 function openCopy(group){copyGroupKey=group;copyDate=new Date();
   document.getElementById("cTitle").textContent="Copy "+group+" to…";
   renderCopyLabel();document.getElementById("copyModal").classList.add("show");}
@@ -403,8 +475,7 @@ document.getElementById("cNext").onclick=()=>{copyDate.setDate(copyDate.getDate(
 document.getElementById("cCancel").onclick=()=>document.getElementById("copyModal").classList.remove("show");
 document.getElementById("copyModal").onclick=e=>{if(e.target.id==="copyModal")e.currentTarget.classList.remove("show");};
 document.getElementById("cConfirm").onclick=async()=>{
-  const target=fmt(copyDate);
-  document.getElementById("cConfirm").disabled=true;
+  const target=fmt(copyDate);document.getElementById("cConfirm").disabled=true;
   try{const r=await api({action:"copy",date:fmt(currentDate),group:copyGroupKey,target});
     if(!r.ok)throw new Error(r.error);
     document.getElementById("copyModal").classList.remove("show");
@@ -420,6 +491,7 @@ document.getElementById("nextDay").onclick=()=>shiftDay(1);
 document.getElementById("dateLabel").onclick=()=>{currentDate=new Date();loadDay();};
 setMode("scan");
 loadDay();
+ensureFoods();   // prefetch the food list so suggestions are instant
 </script>
 </body>
 </html>
