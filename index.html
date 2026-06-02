@@ -88,7 +88,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbzW7mWQQJ8IMhS-mNv5ivbuxPCpy77Ry0YCCY0-czCK6M4rF2OKn6XQ3349TIpB6nIw/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbwVPnV4HhJ0J4wuCKqnq0XMSviOkO1tlCkzo6XudaoylqJf-CSTyGq3VHoaOkTbJZ4Q/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -216,7 +216,8 @@
 const GROUPS=[["breakfast","Breakfast"],["lunch","Lunch"],["snacks","Snacks"],["dinner","Dinner"]];
 let currentDate=new Date();
 let scanning=false,lastScan="",lastScanAt=0;
-let previewBase=null,previewBarcode="";
+let previewBase=null,previewBarcode="",previewEditId=null;
+let currentItems={};
 let copyGroupKey="",copyDate=new Date();
 let foodsCache=[],foodsLoaded=false,foodsLoading=null;
 
@@ -260,6 +261,7 @@ async function loadDay(){
 }
 function renderDay(data){
   const board=document.getElementById("board");
+  currentItems={};data.items.forEach(it=>{currentItems[it.id]=it;});
   const byGroup={breakfast:[],lunch:[],snacks:[],dinner:[]};
   data.items.forEach(it=>{(byGroup[it.group]||byGroup.snacks).push(it);});
   board.innerHTML="";
@@ -296,6 +298,10 @@ function wireBoard(){
   }));
   document.querySelectorAll(".copy").forEach(b=>b.addEventListener("click",()=>openCopy(b.dataset.group)));
   document.querySelectorAll(".add").forEach(b=>b.addEventListener("click",()=>openMethod(b.dataset.group)));
+  document.querySelectorAll(".item").forEach(el=>el.addEventListener("click",e=>{
+    if(e.target.closest(".del"))return;          // the × handles its own click
+    openEdit(el.dataset.id);
+  }));
   document.querySelectorAll(".list").forEach(listEl=>{
     new Sortable(listEl,{
       group:"meals",animation:150,ghostClass:"sortable-ghost",
@@ -330,9 +336,8 @@ document.getElementById("methodCancel").onclick=()=>hide("methodModal");
 /* ---------- scan modal (camera only on demand) ---------- */
 let stream=null,detector=null,scanTimer=null;
 function openScan(){
-  const hint=document.getElementById("scanHint");
-  hint.textContent="Tap to open the camera, then point it at a barcode.";hint.className="muted";
   show("scanModal");
+  startScan();   // open the camera right away
 }
 document.getElementById("scanCancel").onclick=()=>{stopScan();hide("scanModal");};
 document.getElementById("camToggle").onclick=()=>{ stream?stopScan():startScan(); };
@@ -502,14 +507,27 @@ function applyFood(f){
 /* ---------- preview modal ---------- */
 function defaultGroup(){const h=new Date().getHours();return h<11?"breakfast":h<15?"lunch":h<18?"snacks":"dinner";}
 function openPreview(o){
-  previewBase=o.base||null;previewBarcode=o.barcode||"";
+  previewBase=o.base||null;previewBarcode=o.barcode||"";previewEditId=o.editId||null;
   document.getElementById("mTitle").textContent=o.title||"Log food";
+  document.getElementById("mLog").textContent=previewEditId?"Save":"Log it";
   itemInput.value=o.item||"";suggestBox.style.display="none";
   document.getElementById("mGroup").value=o.group||defaultGroup();
-  document.getElementById("mGrams").value=o.grams||100;
+  const g=o.grams||100;
+  document.getElementById("mGrams").value=g;
   setGramsMode(!!previewBase);
-  setMacros(previewBase?scaled(previewBase,100):(o.macros||{}));
+  setMacros(previewBase?scaled(previewBase,g):(o.macros||{}));
   document.getElementById("modal").classList.add("show");
+}
+function openEdit(id){
+  const it=currentItems[id];if(!it)return;
+  ensureFoods();
+  const g=parseFloat(it.grams);
+  // If grams was recorded we can derive a per-100g base, so editing grams rescales the macros.
+  const base=(g>0)?{calories:it.calories/g*100,carbs:it.carbs/g*100,fat:it.fat/g*100,
+    protein:it.protein/g*100,fiber:it.fiber/g*100,sugar:it.sugar/g*100}:null;
+  openPreview({title:"Edit · "+groupLabel(it.group),editId:id,item:it.item,group:it.group,barcode:it.barcode,
+    base:base,grams:(g>0?g:100),
+    macros:{calories:it.calories,carbs:it.carbs,fat:it.fat,protein:it.protein,fiber:it.fiber,sugar:it.sugar}});
 }
 function setGramsMode(hasBase){
   document.getElementById("gramsField").style.display="";   // always shown now
@@ -525,17 +543,21 @@ document.getElementById("mCancel").onclick=closeModal;
 document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
 document.getElementById("mLog").onclick=async()=>{
   const v=id=>document.getElementById(id).value;
-  const payload={action:"add",item:v("mItem")||"Unnamed",group:v("mGroup"),barcode:previewBarcode,grams:num(v("mGrams")),
+  const isEdit=!!previewEditId;
+  const payload={action:isEdit?"update":"add",item:v("mItem")||"Unnamed",group:v("mGroup"),barcode:previewBarcode,grams:num(v("mGrams")),
     calories:num(v("mCalories")),carbs:num(v("mCarbs")),fat:num(v("mFat")),
     protein:num(v("mProtein")),fiber:num(v("mFiber")),sugar:num(v("mSugar")),date:fmt(currentDate)};
+  if(isEdit)payload.id=previewEditId;
   document.getElementById("mLog").disabled=true;
   try{const r=await api(payload);if(!r.ok)throw new Error(r.error||"failed");
-    foodsCache.unshift({item:payload.item,barcode:payload.barcode,per100:false,
-      calories:Number(payload.calories)||0,carbs:Number(payload.carbs)||0,fat:Number(payload.fat)||0,
-      protein:Number(payload.protein)||0,fiber:Number(payload.fiber)||0,sugar:Number(payload.sugar)||0});
-    ensureFoods(true);                       // resync the list in the background
-    closeModal();toast("✓ Logged "+r.item);loadDay();}
-  catch(e){toast("Log failed: "+e.message,true);}
+    if(!isEdit){
+      foodsCache.unshift({item:payload.item,barcode:payload.barcode,per100:false,
+        calories:Number(payload.calories)||0,carbs:Number(payload.carbs)||0,fat:Number(payload.fat)||0,
+        protein:Number(payload.protein)||0,fiber:Number(payload.fiber)||0,sugar:Number(payload.sugar)||0});
+      ensureFoods(true);
+    }
+    closeModal();toast(isEdit?("✓ Saved "+r.item):("✓ Logged "+r.item));loadDay();}
+  catch(e){toast((isEdit?"Save":"Log")+" failed: "+e.message,true);}
   finally{document.getElementById("mLog").disabled=false;}
 };
 function num(s){if(s==null)return"";const m=String(s).replace(",",".").match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):"";}
