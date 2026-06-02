@@ -84,7 +84,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbwpAMX4jfxJ_VYTUr1NcimgqSr_8aLGdWHMx8Pg8jeBYW3SJeYOqvXTInYwpviq3ELm/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbzW7mWQQJ8IMhS-mNv5ivbuxPCpy77Ry0YCCY0-czCK6M4rF2OKn6XQ3349TIpB6nIw/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -143,7 +143,7 @@
         <option value="snacks">Snacks</option><option value="dinner">Dinner</option>
       </select>
     </div>
-    <div class="field" id="gramsField"><label>Grams (scales the values below)</label><input id="mGrams" type="number" value="100" inputmode="decimal"></div>
+    <div class="field" id="gramsField"><label id="gramsLabel">Weight (g)</label><input id="mGrams" type="number" value="100" inputmode="decimal"></div>
     <div class="macros">
       <div class="field"><label>Calories</label><input id="mCalories" type="number" inputmode="decimal"></div>
       <div class="field"><label>Carbs (g)</label><input id="mCarbs" type="number" inputmode="decimal"></div>
@@ -252,7 +252,8 @@ function renderDay(data){
   wireBoard();
 }
 function itemHTML(it){return '<div class="item" data-id="'+it.id+'">'+
-  '<span class="nm">'+esc(it.item)+'</span><span class="cal">'+Math.round(it.calories)+' kcal</span>'+
+  '<span class="nm">'+esc(it.item)+(it.grams?' <span style="color:var(--muted);font-size:.8rem">'+esc(it.grams)+' g</span>':'')+'</span>'+
+  '<span class="cal">'+Math.round(it.calories)+' kcal</span>'+
   '<button class="del" data-id="'+it.id+'" title="Remove">×</button></div>';}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
@@ -414,32 +415,43 @@ function ensureFoods(force){
 }
 const itemInput=document.getElementById("mItem");
 const suggestBox=document.getElementById("suggest");
-function renderSuggest(q){
-  const matches=foodsCache.filter(f=>f.item.toLowerCase().indexOf(q)>=0).slice(0,8);
-  if(!matches.length){suggestBox.style.display="none";return;}
-  suggestBox._matches=matches;
-  suggestBox.innerHTML=matches.map((f,i)=>'<div class="sg" data-i="'+i+'"><span>'+esc(f.item)+'</span>'+
+let searchTimer=null;
+function localMatches(q){return foodsCache.filter(f=>f.item.toLowerCase().indexOf(q)>=0).slice(0,6);}
+function mergeFoods(a,b){const seen={},out=[];a.concat(b).forEach(f=>{const k=f.item.toLowerCase();if(seen[k])return;seen[k]=true;out.push(f);});return out.slice(0,14);}
+function renderSuggest(list,searching){
+  if(!list.length&&!searching){suggestBox.style.display="none";return;}
+  suggestBox._matches=list;
+  let html=list.map((f,i)=>'<div class="sg" data-i="'+i+'"><span>'+esc(f.item)+'</span>'+
     '<span class="sgcal">'+Math.round(f.calories)+(f.per100?" /100g":"")+'</span></div>').join("");
-  suggestBox.querySelectorAll(".sg").forEach(el=>el.addEventListener("pointerdown",ev=>{
+  if(searching)html+='<div class="sg" style="cursor:default;color:var(--muted)"><span>Searching Open Food Facts…</span></div>';
+  suggestBox.innerHTML=html;
+  suggestBox.querySelectorAll(".sg[data-i]").forEach(el=>el.addEventListener("pointerdown",ev=>{
     ev.preventDefault();applyFood(suggestBox._matches[+el.dataset.i]);}));
   suggestBox.style.display="block";
 }
-itemInput.addEventListener("input",async()=>{
+itemInput.addEventListener("input",()=>{
   const q=itemInput.value.trim().toLowerCase();
+  clearTimeout(searchTimer);
   if(q.length<2){suggestBox.style.display="none";return;}
-  if(!foodsLoaded)await ensureFoods();              // load lazily if the prefetch hasn't finished
-  if(itemInput.value.trim().toLowerCase()!==q)return; // user kept typing while we loaded
-  renderSuggest(q);
+  if(!foodsLoaded)ensureFoods();
+  renderSuggest(localMatches(q),true);                 // show your own foods instantly
+  const qSnap=q;
+  searchTimer=setTimeout(async()=>{                    // then add global results (debounced)
+    let remote=[];
+    try{const r=await api({action:"search",q:qSnap});if(r&&r.ok)remote=r.items;}catch(_){}
+    if(itemInput.value.trim().toLowerCase()!==qSnap)return;   // user moved on
+    renderSuggest(mergeFoods(localMatches(qSnap),remote),false);
+  },400);
 });
 itemInput.addEventListener("blur",()=>setTimeout(()=>suggestBox.style.display="none",150));
 function applyFood(f){
   itemInput.value=f.item;previewBarcode=f.barcode||"";
   if(f.per100){
     previewBase={calories:f.calories,carbs:f.carbs,fat:f.fat,protein:f.protein,fiber:f.fiber,sugar:f.sugar};
-    document.getElementById("gramsField").style.display="";document.getElementById("mGrams").value=100;
+    document.getElementById("mGrams").value=100;setGramsMode(true);
     setMacros(scaled(previewBase,100));
   }else{
-    previewBase=null;document.getElementById("gramsField").style.display="none";
+    previewBase=null;setGramsMode(false);
     setMacros({calories:f.calories,carbs:f.carbs,fat:f.fat,protein:f.protein,fiber:f.fiber,sugar:f.sugar});
   }
   suggestBox.style.display="none";
@@ -452,10 +464,14 @@ function openPreview(o){
   document.getElementById("mTitle").textContent=o.title||"Log food";
   itemInput.value=o.item||"";suggestBox.style.display="none";
   document.getElementById("mGroup").value=defaultGroup();
-  document.getElementById("gramsField").style.display=previewBase?"":"none";
-  document.getElementById("mGrams").value=100;
+  document.getElementById("mGrams").value=o.grams||100;
+  setGramsMode(!!previewBase);
   setMacros(previewBase?scaled(previewBase,100):(o.macros||{}));
   document.getElementById("modal").classList.add("show");
+}
+function setGramsMode(hasBase){
+  document.getElementById("gramsField").style.display="";   // always shown now
+  document.getElementById("gramsLabel").textContent=hasBase?"Weight (g) — scales the values below":"Weight (g) eaten";
 }
 function setMacros(o){["calories","carbs","fat","protein","fiber","sugar"].forEach(k=>{
   document.getElementById("m"+k[0].toUpperCase()+k.slice(1)).value=fix(o[k]);});}
@@ -468,7 +484,7 @@ document.getElementById("mCancel").onclick=closeModal;
 document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
 document.getElementById("mLog").onclick=async()=>{
   const v=id=>document.getElementById(id).value;
-  const payload={action:"add",item:v("mItem")||"Unnamed",group:v("mGroup"),barcode:previewBarcode,
+  const payload={action:"add",item:v("mItem")||"Unnamed",group:v("mGroup"),barcode:previewBarcode,grams:num(v("mGrams")),
     calories:num(v("mCalories")),carbs:num(v("mCarbs")),fat:num(v("mFat")),
     protein:num(v("mProtein")),fiber:num(v("mFiber")),sugar:num(v("mSugar")),date:fmt(currentDate)};
   document.getElementById("mLog").disabled=true;
