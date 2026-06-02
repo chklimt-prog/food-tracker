@@ -39,6 +39,10 @@
   .group[data-group=dinner] h2{border-color:var(--dinner)}
   .group h2 .sub{margin-left:auto;color:var(--muted);font-weight:500;font-size:.85rem}
   .group h2 .copy{background:var(--card2);color:var(--accent);padding:.28rem .55rem;font-size:.8rem}
+  .group h2 .add{background:var(--accent);color:#fff;padding:.28rem .6rem;font-size:.8rem}
+  .methods{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .methods button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:18px 8px;background:var(--card2);color:var(--ink);font-size:.95rem}
+  .methods button svg{color:var(--accent)}
   .list{min-height:40px;padding:4px 8px 10px}
   .item{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin:6px 0}
   .item .nm{flex:1;font-size:.95rem}
@@ -97,29 +101,7 @@
   <button id="nextDay">&rsaquo;</button>
 </div>
 
-<div class="tabs">
-  <button data-mode="scan" class="active">Scan</button>
-  <button data-mode="photo">Photo</button>
-  <button data-mode="manual">Manual</button>
-  <button data-mode="recents">Recents</button>
-</div>
-
-<div id="panel-scan" class="panel">
-  <button class="bigbtn" id="camToggle">📷 Start camera</button>
-  <video id="cam" autoplay playsinline muted style="display:none"></video>
-  <p class="muted" id="scanHint" style="font-size:.85rem">Tap to open the camera, then point it at a barcode.</p>
-</div>
-<div id="panel-photo" class="panel" style="display:none">
-  <button class="ghost bigbtn" id="photoBtn">📷 Photograph label</button>
-  <p class="muted" style="font-size:.85rem">Reads the nutrition values off the label. Always check them before logging.</p>
-  <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
-</div>
-<div id="panel-manual" class="panel" style="display:none">
-  <button class="bigbtn" id="manualBtn">＋ New manual entry</button>
-</div>
-<div id="panel-recents" class="panel" style="display:none">
-  <div id="recentsList"><p class="muted">…</p></div>
-</div>
+<input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
 
 <div id="board"><p class="muted">Loading…</p></div>
 
@@ -182,8 +164,53 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- Add-method picker -->
+<div class="modal" id="methodModal">
+  <div class="sheet">
+    <h3 id="methodTitle">Add to…</h3>
+    <div class="methods">
+      <button data-m="barcode">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><rect x="3" y="5" width="2" height="14"/><rect x="7" y="5" width="1.2" height="14"/><rect x="10" y="5" width="2" height="14"/><rect x="14" y="5" width="1.2" height="14"/><rect x="16.5" y="5" width="2" height="14"/><rect x="20" y="5" width="1.2" height="14"/></svg>
+        <span>Barcode</span>
+      </button>
+      <button data-m="label">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 12l8.5-8.5H19a2 2 0 0 1 2 2v7.5L12.5 21a2 2 0 0 1-3 0L3 15a2 2 0 0 1 0-3z"/><circle cx="16.5" cy="7.5" r="1.3" fill="currentColor"/></svg>
+        <span>Label</span>
+      </button>
+      <button data-m="manual">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h4L18.5 9.5l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+        <span>Manual</span>
+      </button>
+      <button data-m="recents">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <span>Recents</span>
+      </button>
+    </div>
+    <div class="row"><button class="ghost" id="methodCancel">Cancel</button></div>
+  </div>
+</div>
 
+<!-- Scan (camera on demand) -->
+<div class="modal" id="scanModal">
+  <div class="sheet">
+    <h3>Scan barcode</h3>
+    <button class="bigbtn" id="camToggle">📷 Start camera</button>
+    <video id="cam" autoplay playsinline muted style="display:none"></video>
+    <p class="muted" id="scanHint" style="font-size:.85rem">Tap to open the camera, then point it at a barcode.</p>
+    <div class="row"><button class="ghost" id="scanCancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Recents -->
+<div class="modal" id="recentsModal">
+  <div class="sheet">
+    <h3>Recent foods</h3>
+    <div id="recentsList"><p class="muted">…</p></div>
+    <div class="row"><button class="ghost" id="recentsCancel">Close</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 const GROUPS=[["breakfast","Breakfast"],["lunch","Lunch"],["snacks","Snacks"],["dinner","Dinner"]];
@@ -241,7 +268,8 @@ function renderDay(data){
     const sub=Math.round(list.reduce((s,i)=>s+i.calories,0));
     const sec=document.createElement("div");sec.className="group";sec.dataset.group=key;
     sec.innerHTML='<h2>'+label+'<span class="sub">'+sub+' kcal</span>'+
-      '<button class="copy" data-group="'+key+'">Copy to…</button></h2>'+
+      '<button class="copy" data-group="'+key+'">Copy to…</button>'+
+      '<button class="add" data-group="'+key+'">+ Add</button></h2>'+
       '<div class="list" data-group="'+key+'">'+
       (list.length?list.map(itemHTML).join(""):'<div class="empty">— empty —</div>')+'</div>';
     board.appendChild(sec);
@@ -267,6 +295,7 @@ function wireBoard(){
     catch(err){toast("Delete failed: "+err.message,true);}
   }));
   document.querySelectorAll(".copy").forEach(b=>b.addEventListener("click",()=>openCopy(b.dataset.group)));
+  document.querySelectorAll(".add").forEach(b=>b.addEventListener("click",()=>openMethod(b.dataset.group)));
   document.querySelectorAll(".list").forEach(listEl=>{
     new Sortable(listEl,{
       group:"meals",animation:150,ghostClass:"sortable-ghost",
@@ -283,21 +312,33 @@ function wireBoard(){
   });
 }
 
-/* ---------- modes ---------- */
-function setMode(mode){
-  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
-  ["scan","photo","manual","recents"].forEach(m=>document.getElementById("panel-"+m).style.display=(m===mode?"":"none"));
-  if(mode!=="scan")stopScan();
-  if(mode==="recents")loadRecents();
-}
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+/* ---------- add-method picker ---------- */
+let pendingGroup="snacks";
+function groupLabel(k){const g=GROUPS.find(x=>x[0]===k);return g?g[1]:k;}
+function show(id){document.getElementById(id).classList.add("show");}
+function hide(id){document.getElementById(id).classList.remove("show");}
+function openMethod(group){pendingGroup=group;document.getElementById("methodTitle").textContent="Add to "+groupLabel(group);show("methodModal");}
+document.querySelectorAll(".methods button").forEach(b=>b.onclick=()=>{
+  const m=b.dataset.m;hide("methodModal");
+  if(m==="barcode")openScan();
+  else if(m==="label")document.getElementById("photoInput").click();
+  else if(m==="manual"){ensureFoods();openPreview({title:"Manual — "+groupLabel(pendingGroup),item:"",group:pendingGroup});}
+  else if(m==="recents")openRecents();
+});
+document.getElementById("methodCancel").onclick=()=>hide("methodModal");
 
-/* ---------- scan (camera only on demand) ---------- */
+/* ---------- scan modal (camera only on demand) ---------- */
 let stream=null,detector=null,scanTimer=null;
+function openScan(){
+  const hint=document.getElementById("scanHint");
+  hint.textContent="Tap to open the camera, then point it at a barcode.";hint.className="muted";
+  show("scanModal");
+}
+document.getElementById("scanCancel").onclick=()=>{stopScan();hide("scanModal");};
 document.getElementById("camToggle").onclick=()=>{ stream?stopScan():startScan(); };
 async function startScan(){
   const hint=document.getElementById("scanHint");
-  if(!("BarcodeDetector" in window)){hint.textContent="Barcode scanning unsupported here — use Photo or Manual.";hint.className="err";return;}
+  if(!("BarcodeDetector" in window)){hint.textContent="Barcode scanning unsupported here — use Label or Manual.";hint.className="err";return;}
   if(!detector)detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
@@ -322,19 +363,23 @@ function stopScan(){
 async function onBarcode(code){
   scanning=false;toast("Looking up "+code+"…");
   try{const r=await api({action:"lookup",barcode:code});
-    if(r.ok)openPreview({title:"Log scanned item",item:r.item,base:r.per100,barcode:r.barcode});
-    else{toast(r.error||"Not found",true);openPreview({title:"Not found — enter manually",item:"",barcode:code});}
+    stopScan();hide("scanModal");
+    if(r.ok)openPreview({title:"Scanned — "+groupLabel(pendingGroup),item:r.item,base:r.per100,barcode:r.barcode,group:pendingGroup});
+    else{toast(r.error||"Not found",true);openPreview({title:"Not found — enter manually",item:"",barcode:code,group:pendingGroup});}
   }catch(e){toast("Lookup failed: "+e.message,true);scanning=true;}
 }
 
+/* ---------- recents modal ---------- */
+function openRecents(){show("recentsModal");loadRecents();}
+document.getElementById("recentsCancel").onclick=()=>hide("recentsModal");
+
 /* ---------- photo (full label OCR, German + English) ---------- */
-document.getElementById("photoBtn").onclick=()=>document.getElementById("photoInput").click();
 document.getElementById("photoInput").onchange=async e=>{
   const file=e.target.files[0];if(!file)return;e.target.value="";
   toast("Reading label… (first use downloads the OCR engine)");
   try{const text=await runOCR(file);
-    openPreview({title:"From label — check the values",item:guessName(text),macros:parseLabel(text)});
-  }catch(err){toast("OCR failed: "+err.message,true);openPreview({title:"Enter manually",item:""});}
+    openPreview({title:"Label — "+groupLabel(pendingGroup),item:guessName(text),macros:parseLabel(text),group:pendingGroup});
+  }catch(err){toast("OCR failed: "+err.message,true);openPreview({title:"Enter manually",item:"",group:pendingGroup});}
 };
 let tessLoading=null;
 function loadTesseract(){
@@ -384,9 +429,6 @@ function parseLabel(text){
 }
 function guessName(text){const ln=(text||"").split(/\n/).map(s=>s.trim()).filter(s=>s.length>2);return ln[0]?ln[0].slice(0,40):"";}
 
-/* ---------- manual ---------- */
-document.getElementById("manualBtn").onclick=()=>{ensureFoods();openPreview({title:"New manual entry",item:""});};
-
 /* ---------- recents ---------- */
 async function loadRecents(){
   const el=document.getElementById("recentsList");el.innerHTML='<p class="muted">Loading…</p>';
@@ -397,8 +439,8 @@ async function loadRecents(){
     r.items.forEach(it=>{
       const d=document.createElement("div");d.className="recent";
       d.innerHTML='<span class="nm">'+esc(it.item)+'</span><span class="cal">'+Math.round(it.calories)+' kcal</span>';
-      d.onclick=()=>openPreview({title:"Add to log",item:it.item,barcode:it.barcode,
-        macros:{calories:it.calories,carbs:it.carbs,fat:it.fat,protein:it.protein,fiber:it.fiber,sugar:it.sugar}});
+      d.onclick=()=>{hide("recentsModal");openPreview({title:"Recent — "+groupLabel(pendingGroup),item:it.item,barcode:it.barcode,group:pendingGroup,
+        macros:{calories:it.calories,carbs:it.carbs,fat:it.fat,protein:it.protein,fiber:it.fiber,sugar:it.sugar}});};
       el.appendChild(d);
     });
   }catch(e){el.innerHTML='<p class="err">Could not load recents: '+e.message+'</p>';}
@@ -463,7 +505,7 @@ function openPreview(o){
   previewBase=o.base||null;previewBarcode=o.barcode||"";
   document.getElementById("mTitle").textContent=o.title||"Log food";
   itemInput.value=o.item||"";suggestBox.style.display="none";
-  document.getElementById("mGroup").value=defaultGroup();
+  document.getElementById("mGroup").value=o.group||defaultGroup();
   document.getElementById("mGrams").value=o.grams||100;
   setGramsMode(!!previewBase);
   setMacros(previewBase?scaled(previewBase,100):(o.macros||{}));
@@ -478,8 +520,7 @@ function setMacros(o){["calories","carbs","fat","protein","fiber","sugar"].forEa
 function fix(v){return(v===""||v==null||isNaN(v))?"":Math.round(v*10)/10;}
 function scaled(b,g){const f=g/100;return{calories:b.calories*f,carbs:b.carbs*f,fat:b.fat*f,protein:b.protein*f,fiber:b.fiber*f,sugar:b.sugar*f};}
 document.getElementById("mGrams").oninput=()=>{if(previewBase)setMacros(scaled(previewBase,parseFloat(document.getElementById("mGrams").value)||0));};
-function closeModal(){document.getElementById("modal").classList.remove("show");suggestBox.style.display="none";
-  if(document.querySelector(".tabs button.active").dataset.mode==="scan"&&stream)scanning=true;}
+function closeModal(){document.getElementById("modal").classList.remove("show");suggestBox.style.display="none";}
 document.getElementById("mCancel").onclick=closeModal;
 document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
 document.getElementById("mLog").onclick=async()=>{
@@ -525,7 +566,6 @@ document.getElementById("cConfirm").onclick=async()=>{
 document.getElementById("prevDay").onclick=()=>shiftDay(-1);
 document.getElementById("nextDay").onclick=()=>shiftDay(1);
 document.getElementById("dateLabel").onclick=()=>{currentDate=new Date();loadDay();};
-setMode("scan");
 loadDay();
 ensureFoods();   // prefetch the food list so suggestions are instant
 </script>
