@@ -11,7 +11,7 @@
     --breakfast:#ffb020; --lunch:#3ecf6a; --snacks:#b07bff; --dinner:#4c8dff;
   }
   *{box-sizing:border-box}
-  body{margin:0 auto;max-width:520px;padding:0 12px 92px;background:var(--bg);color:var(--ink);
+  body{margin:0 auto;max-width:520px;padding:0 12px 116px;background:var(--bg);color:var(--ink);
        font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
   h1{font-size:1.25rem;margin:14px 4px 4px}
   .muted{color:var(--muted)} .err{color:var(--err)} .ok{color:var(--ok)}
@@ -82,19 +82,50 @@
   #toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:#000;color:#fff;
          padding:.6rem 1rem;border-radius:10px;font-size:.9rem;opacity:0;transition:opacity .25s;z-index:30;pointer-events:none;border:1px solid var(--line)}
   #toast.show{opacity:.97}
+  /* tabs + views */
+  #tabbar{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;display:flex;background:var(--card);border-top:1px solid var(--line);z-index:15}
+  #tabbar button{flex:1;background:none;color:var(--muted);border-radius:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;font-size:.72rem}
+  #tabbar button span{font-size:1.2rem;line-height:1}
+  #tabbar button.active{color:var(--accent)}
+  .totals{bottom:58px}
+  .chips{display:flex;gap:8px;margin:8px 0}
+  .chips button{flex:1;background:var(--card2);color:var(--ink);border:1px solid var(--line);padding:8px 4px;font-size:.8rem;display:flex;flex-direction:column;gap:3px;align-items:center}
+  .chips button.sel{border-color:var(--accent);color:var(--accent)}
+  .chips button.done{background:#13351f;border-color:var(--ok)}
+  .chips .dot{font-size:.72rem;color:var(--muted)}
+  .wgroup{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}
+  .wgroup h2{margin:0;padding:10px 12px;font-size:1rem;border-left:5px solid var(--dinner)}
+  .wex{padding:10px 12px;border-top:1px solid var(--line)}
+  .wex .top{display:flex;align-items:baseline;gap:8px}
+  .wex .nm{font-weight:600;flex:1}
+  .wex .swap{background:none;color:var(--muted);padding:2px 8px;font-size:1.1rem}
+  .wex .meta{color:var(--muted);font-size:.78rem;margin:2px 0 8px}
+  .wex .last{color:var(--accent)}
+  .wex .ctrls{display:flex;gap:8px;align-items:center}
+  .wex .ctrls input{flex:1}
+  .status{display:flex;gap:4px}
+  .status button{background:var(--card2);color:var(--muted);padding:.45rem .55rem;border:1px solid var(--line);font-size:.95rem}
+  .status button.on-done{background:#13351f;color:#fff;border-color:var(--ok)}
+  .status button.on-e{background:#4a1f1c;color:#fff;border-color:var(--err)}
+  .status button.on-inj{background:#3a2a55;color:#fff;border-color:#8e5bd0}
+  .wex.s-notdone .ctrls input{opacity:.35}
+  .wex.s-injury{background:#241a33}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+  .card h3{margin:.1rem 0 .7rem;font-size:1rem}
+  .statrow{display:flex;justify-content:space-between;margin:5px 0;font-size:.9rem}
+  .statrow b{font-size:1rem}
 </style>
 </head>
 <body>
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbwVPnV4HhJ0J4wuCKqnq0XMSviOkO1tlCkzo6XudaoylqJf-CSTyGq3VHoaOkTbJZ4Q/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbxTmFf8S6GQF_s8EMcFI-Z1CfClDrNNAm4BmEPxghhu60M343Tx57tyAnvUxA7gG_Oz/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
 
-<h1>Food Tracker</h1>
-
+<div id="view-food" class="view">
 <div class="datenav">
   <button id="prevDay">&lsaquo;</button>
   <span class="label" id="dateLabel">Today</span>
@@ -105,10 +136,31 @@
 
 <div id="board"><p class="muted">Loading…</p></div>
 
-<div class="totals">
+<div class="totals" id="foodTotals">
   <span class="kcal">Total <b id="tCal">0</b> kcal</span>
   <span class="macroline" id="tMacros">C 0 · F 0 · P 0 · Fib 0 · Sug 0</span>
 </div>
+</div><!-- /view-food -->
+
+<div id="view-workout" class="view" style="display:none">
+  <div class="datenav">
+    <button id="wPrev">&lsaquo;</button>
+    <span class="label" id="wDateLabel">Today</span>
+    <button id="wNext">&rsaquo;</button>
+  </div>
+  <div id="weekChips" class="chips"></div>
+  <div id="wBoard"><p class="muted">Loading…</p></div>
+</div>
+
+<div id="view-dashboard" class="view" style="display:none">
+  <div id="dash"><p class="muted">Loading…</p></div>
+</div>
+
+<nav id="tabbar">
+  <button data-view="food" class="active"><span>🍎</span>Food</button>
+  <button data-view="workout"><span>🏋️</span>Workout</button>
+  <button data-view="dashboard"><span>📊</span>Dashboard</button>
+</nav>
 
 <!-- Preview / edit modal -->
 <div class="modal" id="modal">
@@ -198,6 +250,19 @@
     <video id="cam" autoplay playsinline muted style="display:none"></video>
     <p class="muted" id="scanHint" style="font-size:.85rem">Tap to open the camera, then point it at a barcode.</p>
     <div class="row"><button class="ghost" id="scanCancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Swap exercise -->
+<div class="modal" id="swapModal">
+  <div class="sheet">
+    <h3>Swap exercise</h3>
+    <p class="muted" id="swapOld" style="font-size:.82rem"></p>
+    <div class="field"><label>New exercise</label><input id="swExercise" autocomplete="off"></div>
+    <div class="field"><label>Sets &amp; reps</label><input id="swSets" autocomplete="off"></div>
+    <div class="field"><label>Break</label><input id="swBreak" autocomplete="off"></div>
+    <div class="field"><label>Growth technique</label><input id="swTech" autocomplete="off"></div>
+    <div class="row"><button class="ghost" id="swCancel">Cancel</button><button id="swSave">Swap</button></div>
   </div>
 </div>
 
@@ -584,10 +649,141 @@ document.getElementById("cConfirm").onclick=async()=>{
   finally{document.getElementById("cConfirm").disabled=false;}
 };
 
+/* ===================== TABS ===================== */
+let curView="food";
+function switchView(v){
+  curView=v;
+  document.querySelectorAll("#tabbar button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+  ["food","workout","dashboard"].forEach(x=>document.getElementById("view-"+x).style.display=(x===v?"":"none"));
+  document.getElementById("foodTotals").style.display=(v==="food"?"":"none");
+  if(v==="workout")loadWorkout();
+  if(v==="dashboard")loadDashboard();
+}
+document.querySelectorAll("#tabbar button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+
+/* ===================== WORKOUT ===================== */
+const WDAYS=[[1,"Heavy Chest & Back"],[2,"Heavy Legs & Tricep"],[3,"Pump Chest & Back"],[4,"Pump Legs & Shldr"]];
+let wDate=new Date(), wDay=1, wSwapId=null;
+function wShift(n){wDate.setDate(wDate.getDate()+n);loadWorkout();}
+async function loadWorkout(){
+  document.getElementById("wDateLabel").textContent=dayLabel(wDate);
+  const chips=document.getElementById("weekChips"), board=document.getElementById("wBoard");
+  board.innerHTML='<p class="muted">Loading…</p>';
+  let doneDays=[];
+  try{const wk=await api({action:"wweek",date:fmt(wDate)});if(wk&&wk.ok)doneDays=wk.done||[];}catch(_){}
+  chips.innerHTML=WDAYS.map(([n,nm])=>'<button data-day="'+n+'" class="'+(n===wDay?"sel ":"")+(doneDays.indexOf(n)>=0?"done":"")+'">'+
+    '<span>Day '+n+'</span><span class="dot">'+(doneDays.indexOf(n)>=0?"✓ done":nm.split(" ")[0])+'</span></button>').join("");
+  chips.querySelectorAll("button").forEach(b=>b.onclick=()=>{wDay=+b.dataset.day;loadWorkout();});
+  try{
+    const r=await api({action:"wday",date:fmt(wDate),day:wDay});
+    if(!r.ok)throw new Error(r.error||"failed");
+    renderWorkout(r);
+  }catch(e){board.innerHTML='<p class="err">Could not load: '+e.message+'</p>';}
+}
+function renderWorkout(r){
+  const board=document.getElementById("wBoard");
+  if(!r.exercises.length){board.innerHTML='<div class="card">No exercises for this day. Run “Set up / migrate sheets” in the spreadsheet.</div>';return;}
+  let html='<div class="wgroup"><h2>Day '+r.dayNum+' · '+esc(r.dayName)+'</h2>';
+  r.exercises.forEach(ex=>{
+    const st=(ex.log&&ex.log.status)||"done";
+    const val=ex.log?ex.log.value:"";
+    const last=ex.last?('last: '+ex.last.value+' ('+shortDate(ex.last.date)+')'):"";
+    html+='<div class="wex s-'+st+'" data-id="'+ex.id+'">'+
+      '<div class="top"><span class="nm">'+esc(ex.exercise)+'</span>'+
+        '<button class="swap" title="Swap exercise" data-swap="'+ex.id+'">⇄</button></div>'+
+      '<div class="meta">'+esc(ex.setsReps||"")+(ex.brk&&ex.brk!=="—"?" · "+esc(ex.brk):"")+(ex.technique?" · "+esc(ex.technique):"")+
+        (last?'<br><span class="last">'+esc(last)+'</span>':"")+'</div>'+
+      '<div class="ctrls">'+
+        '<input type="text" inputmode="decimal" placeholder="weight / note" value="'+esc(val)+'" data-val="'+ex.id+'">'+
+        '<div class="status">'+
+          '<button data-st="done" class="'+(st==="done"?"on-done":"")+'" title="Done">✓</button>'+
+          '<button data-st="notdone" class="'+(st==="notdone"?"on-e":"")+'" title="Not done">E</button>'+
+          '<button data-st="injury" class="'+(st==="injury"?"on-inj":"")+'" title="Injury / holiday">🩹</button>'+
+        '</div></div></div>';
+  });
+  html+='</div>';
+  board.innerHTML=html;
+  wireWorkout(r);
+}
+function wireWorkout(r){
+  const exById={};r.exercises.forEach(e=>exById[e.id]=e);
+  // value field: save on change
+  document.querySelectorAll("[data-val]").forEach(inp=>inp.addEventListener("change",()=>{
+    const id=inp.dataset.val;saveWex(exById[id],{value:inp.value});
+  }));
+  // status buttons
+  document.querySelectorAll(".wex .status button").forEach(b=>b.addEventListener("click",()=>{
+    const row=b.closest(".wex"),id=row.dataset.id,st=b.dataset.st;
+    row.className="wex s-"+st;
+    row.querySelectorAll(".status button").forEach(x=>x.className="");
+    b.className=st==="done"?"on-done":st==="notdone"?"on-e":"on-inj";
+    const val=row.querySelector("[data-val]").value;
+    saveWex(exById[id],{value:val,status:st});
+  }));
+  // swap
+  document.querySelectorAll("[data-swap]").forEach(b=>b.addEventListener("click",()=>openSwap(exById[b.dataset.swap])));
+}
+async function saveWex(ex,extra){
+  if(!ex)return;
+  const row=document.querySelector('.wex[data-id="'+ex.id+'"]');
+  const status=row?(row.className.indexOf("s-notdone")>=0?"notdone":row.className.indexOf("s-injury")>=0?"injury":"done"):"done";
+  const payload={action:"wlog",date:fmt(wDate),day:wDay,exerciseId:ex.id,exercise:ex.exercise,
+    value:(extra.value!=null?extra.value:""),status:extra.status||status};
+  try{const r=await api(payload);if(!r.ok)throw new Error(r.error);toast("✓ Saved");}
+  catch(e){toast("Save failed: "+e.message,true);}
+}
+/* swap modal */
+function openSwap(ex){
+  if(!ex)return;wSwapId=ex.id;
+  document.getElementById("swapOld").textContent="Replacing: "+ex.exercise+" (kept in your catalog for history)";
+  document.getElementById("swExercise").value="";
+  document.getElementById("swSets").value=ex.setsReps||"";
+  document.getElementById("swBreak").value=ex.brk||"";
+  document.getElementById("swTech").value=ex.technique||"";
+  show("swapModal");
+}
+document.getElementById("swCancel").onclick=()=>hide("swapModal");
+document.getElementById("swapModal").onclick=e=>{if(e.target.id==="swapModal")hide("swapModal");};
+document.getElementById("swSave").onclick=async()=>{
+  const name=document.getElementById("swExercise").value.trim();
+  if(!name){toast("Enter the new exercise",true);return;}
+  document.getElementById("swSave").disabled=true;
+  try{const r=await api({action:"wswap",exerciseId:wSwapId,exercise:name,
+    setsReps:document.getElementById("swSets").value,brk:document.getElementById("swBreak").value,technique:document.getElementById("swTech").value});
+    if(!r.ok)throw new Error(r.error);hide("swapModal");toast("Swapped");loadWorkout();}
+  catch(e){toast("Swap failed: "+e.message,true);}
+  finally{document.getElementById("swSave").disabled=false;}
+};
+function shortDate(s){const p=String(s).split("-");return p.length===3?(p[2]+"."+p[1]):s;}
+
+/* ===================== DASHBOARD ===================== */
+async function loadDashboard(){
+  const el=document.getElementById("dash");el.innerHTML='<p class="muted">Loading…</p>';
+  const today=fmt(new Date());
+  try{
+    const [food,wk]=await Promise.all([api({action:"day",date:today}),api({action:"wweek",date:today})]);
+    const t=(food&&food.ok)?food.totals:{calories:0,carbs:0,fat:0,protein:0,fiber:0,sugar:0};
+    const done=(wk&&wk.ok)?(wk.done||[]):[];
+    let html='<div class="card"><h3>Today · nutrition</h3>'+
+      statRow("Calories",Math.round(t.calories)+" kcal")+
+      statRow("Carbs",Math.round(t.carbs)+" g")+statRow("Fat",Math.round(t.fat)+" g")+
+      statRow("Protein",Math.round(t.protein)+" g")+statRow("Fiber",Math.round(t.fiber)+" g")+
+      statRow("Sugar",Math.round(t.sugar)+" g")+'</div>';
+    html+='<div class="card"><h3>This week · workouts</h3>'+
+      WDAYS.map(([n,nm])=>statRow("Day "+n+" · "+nm,done.indexOf(n)>=0?"✓ done":"—")).join("")+
+      '<div class="statrow"><b>'+done.length+' / 4</b><span class="muted">completed</span></div></div>';
+    el.innerHTML=html;
+  }catch(e){el.innerHTML='<p class="err">Could not load dashboard: '+e.message+'</p>';}
+}
+function statRow(label,val){return '<div class="statrow"><span>'+esc(label)+'</span><b>'+esc(String(val))+'</b></div>';}
+
 /* ---------- init ---------- */
 document.getElementById("prevDay").onclick=()=>shiftDay(-1);
 document.getElementById("nextDay").onclick=()=>shiftDay(1);
 document.getElementById("dateLabel").onclick=()=>{currentDate=new Date();loadDay();};
+document.getElementById("wPrev").onclick=()=>wShift(-1);
+document.getElementById("wNext").onclick=()=>wShift(1);
+document.getElementById("wDateLabel").onclick=()=>{wDate=new Date();loadWorkout();};
 loadDay();
 ensureFoods();   // prefetch the food list so suggestions are instant
 </script>
