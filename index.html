@@ -120,7 +120,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbzqtqHsd0CqjApwPWDS8B32BrcUJ3dDQmt6qFv2S-YGwhEYxSy9J5hGcssG4tG4Kjqt/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbz2LrbWXrom6LvW-q_cS6EY-fkRqxFyeXIb9zIwS3KNCu06A4HiMe0RRYuXh4CF8igo/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -133,6 +133,7 @@
 </div>
 
 <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+<input type="file" id="mealInput" accept="image/*" capture="environment" hidden>
 
 <div id="board"><p class="muted">Loading…</p></div>
 
@@ -148,6 +149,7 @@
     <span class="label" id="wDateLabel">Today</span>
     <button id="wNext">&rsaquo;</button>
   </div>
+  <div id="dateChips" class="chips" style="overflow-x:auto"></div>
   <div id="weekChips" class="chips"></div>
   <div id="wBoard"><p class="muted">Loading…</p></div>
 </div>
@@ -229,6 +231,10 @@
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 12l8.5-8.5H19a2 2 0 0 1 2 2v7.5L12.5 21a2 2 0 0 1-3 0L3 15a2 2 0 0 1 0-3z"/><circle cx="16.5" cy="7.5" r="1.3" fill="currentColor"/></svg>
         <span>Label</span>
       </button>
+      <button data-m="meal">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h3l1.4-2h9.2L18 8h3v11H3z"/><circle cx="12" cy="13" r="3.3"/></svg>
+        <span>Meal photo</span>
+      </button>
       <button data-m="manual">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M4 20h4L18.5 9.5l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
         <span>Manual</span>
@@ -250,6 +256,18 @@
     <video id="cam" autoplay playsinline muted style="display:none"></video>
     <p class="muted" id="scanHint" style="font-size:.85rem">Tap to open the camera, then point it at a barcode.</p>
     <div class="row"><button class="ghost" id="scanCancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Exercise info -->
+<div class="modal" id="infoModal">
+  <div class="sheet">
+    <h3 id="infoName">Exercise</h3>
+    <div class="statrow"><span>Sets &amp; reps</span><b id="infoSets">—</b></div>
+    <div class="statrow"><span>Break</span><b id="infoBreak">—</b></div>
+    <div class="statrow"><span>Growth technique</span><b id="infoTech">—</b></div>
+    <div class="statrow"><span>Last recorded</span><b id="infoLast">—</b></div>
+    <div class="row"><button class="ghost" id="infoSwap">Swap exercise</button><button id="infoClose">Close</button></div>
   </div>
 </div>
 
@@ -393,6 +411,7 @@ document.querySelectorAll(".methods button").forEach(b=>b.onclick=()=>{
   const m=b.dataset.m;hide("methodModal");
   if(m==="barcode")openScan();
   else if(m==="label")document.getElementById("photoInput").click();
+  else if(m==="meal")document.getElementById("mealInput").click();
   else if(m==="manual"){ensureFoods();openPreview({title:"Manual — "+groupLabel(pendingGroup),item:"",group:pendingGroup});}
   else if(m==="recents")openRecents();
 });
@@ -498,6 +517,46 @@ function parseLabel(text){
   };
 }
 function guessName(text){const ln=(text||"").split(/\n/).map(s=>s.trim()).filter(s=>s.length>2);return ln[0]?ln[0].slice(0,40):"";}
+
+/* ---------- meal photo (AI estimate via Gemini, server-side) ---------- */
+function fileToScaledB64(file,maxDim){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{URL.revokeObjectURL(url);
+      let w=img.width,h=img.height;const s=Math.min(1,maxDim/Math.max(w,h));
+      w=Math.round(w*s);h=Math.round(h*s);
+      const c=document.createElement("canvas");c.width=w;c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      resolve(c.toDataURL("image/jpeg",0.8).split(",")[1]);};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("could not read image"));};
+    img.src=url;
+  });
+}
+document.getElementById("mealInput").onchange=e=>{const f=e.target.files[0];e.target.value="";if(f)analyzeMealPhoto(f);};
+async function analyzeMealPhoto(file){
+  const grp=pendingGroup;
+  toast("Analyzing photo…");
+  let b64;
+  try{b64=await fileToScaledB64(file,768);}catch(err){toast("Image error: "+err.message,true);return;}
+  const id="m_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
+  try{await fetch(API_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action:"meal",id:id,mime:"image/jpeg",image:b64})});}catch(_){}
+  let tries=0;
+  const poll=async()=>{
+    tries++;
+    try{const r=await api({action:"mealresult",id:id});
+      if(r&&r.ready){
+        if(r.ok)openPreview({title:"Estimated from photo — check values",item:r.item||"Meal",group:grp,grams:r.grams||"",
+          macros:{calories:r.calories,carbs:r.carbs,fat:r.fat,protein:r.protein,fiber:r.fiber,sugar:r.sugar}});
+        else{toast("Estimate failed: "+(r.error||"unknown"),true);openPreview({title:"Enter manually",item:"",group:grp});}
+        return;
+      }
+    }catch(_){}
+    if(tries>26){toast("Timed out — enter manually",true);openPreview({title:"Enter manually",item:"",group:grp});return;}
+    setTimeout(poll,1500);
+  };
+  setTimeout(poll,1500);
+}
 
 /* ---------- recents ---------- */
 async function loadRecents(){
@@ -663,16 +722,31 @@ document.querySelectorAll("#tabbar button").forEach(b=>b.onclick=()=>switchView(
 
 /* ===================== WORKOUT ===================== */
 const WDAYS=[[1,"Heavy Chest & Back"],[2,"Heavy Legs & Tricep"],[3,"Pump Chest & Back"],[4,"Pump Legs & Shldr"]];
-let wDate=new Date(), wDay=1, wSwapId=null;
-function wShift(n){wDate.setDate(wDate.getDate()+n);loadWorkout();}
+const WD_SHORT=["Mo","Tu","We","Th","Fr","Sa","Su"];
+let wDate=new Date(), wDay=1, wSwapId=null, wExById={};
+function mondayOf(d){const x=new Date(d);const wd=(x.getDay()+6)%7;x.setDate(x.getDate()-wd);x.setHours(0,0,0,0);return x;}
+function wShiftWeek(n){wDate.setDate(wDate.getDate()+n*7);loadWorkout();}
+function weekLabel(d){const s=mondayOf(d),e=new Date(s);e.setDate(s.getDate()+6);
+  const opt={month:"short",day:"numeric"};
+  return s.toLocaleDateString(undefined,opt)+" – "+e.toLocaleDateString(undefined,opt);}
+
 async function loadWorkout(){
-  document.getElementById("wDateLabel").textContent=dayLabel(wDate);
-  const chips=document.getElementById("weekChips"), board=document.getElementById("wBoard");
+  document.getElementById("wDateLabel").textContent=weekLabel(wDate);
+  const dchips=document.getElementById("dateChips"), chips=document.getElementById("weekChips"), board=document.getElementById("wBoard");
   board.innerHTML='<p class="muted">Loading…</p>';
+  // 7 date chips for the selected week
+  const mon=mondayOf(wDate), todayStr=fmt(new Date());
+  let dhtml="";
+  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);const ds=fmt(d);
+    dhtml+='<button data-date="'+ds+'" class="'+(ds===fmt(wDate)?"sel":"")+'">'+
+      '<span>'+WD_SHORT[i]+'</span><span class="dot">'+d.getDate()+(ds===todayStr?"•":"")+'</span></button>';}
+  dchips.innerHTML=dhtml;
+  dchips.querySelectorAll("button").forEach(b=>b.onclick=()=>{wDate=new Date(b.dataset.date+"T12:00:00");loadWorkout();});
+  // day chips (1-4) with this week's done state
   let doneDays=[];
   try{const wk=await api({action:"wweek",date:fmt(wDate)});if(wk&&wk.ok)doneDays=wk.done||[];}catch(_){}
   chips.innerHTML=WDAYS.map(([n,nm])=>'<button data-day="'+n+'" class="'+(n===wDay?"sel ":"")+(doneDays.indexOf(n)>=0?"done":"")+'">'+
-    '<span>Day '+n+'</span><span class="dot">'+(doneDays.indexOf(n)>=0?"✓ done":nm.split(" ")[0])+'</span></button>').join("");
+    '<span>Day '+n+'</span><span class="dot">'+(doneDays.indexOf(n)>=0?"✓":nm.split(" ")[0])+'</span></button>').join("");
   chips.querySelectorAll("button").forEach(b=>b.onclick=()=>{wDay=+b.dataset.day;loadWorkout();});
   try{
     const r=await api({action:"wday",date:fmt(wDate),day:wDay});
@@ -682,17 +756,14 @@ async function loadWorkout(){
 }
 function renderWorkout(r){
   const board=document.getElementById("wBoard");
-  if(!r.exercises.length){board.innerHTML='<div class="card">No exercises for this day. Run “Set up / migrate sheets” in the spreadsheet.</div>';return;}
+  wExById={};r.exercises.forEach(e=>wExById[e.id]=e);
+  if(!r.exercises.length){board.innerHTML='<div class="card">No exercises. Run “Set up / migrate sheets” in the spreadsheet.</div>';return;}
   let html='<div class="wgroup"><h2>Day '+r.dayNum+' · '+esc(r.dayName)+'</h2>';
   r.exercises.forEach(ex=>{
-    const st=(ex.log&&ex.log.status)||"done";
-    const val=ex.log?ex.log.value:"";
-    const last=ex.last?('last: '+ex.last.value+' ('+shortDate(ex.last.date)+')'):"";
-    html+='<div class="wex s-'+st+'" data-id="'+ex.id+'">'+
-      '<div class="top"><span class="nm">'+esc(ex.exercise)+'</span>'+
-        '<button class="swap" title="Swap exercise" data-swap="'+ex.id+'">⇄</button></div>'+
-      '<div class="meta">'+esc(ex.setsReps||"")+(ex.brk&&ex.brk!=="—"?" · "+esc(ex.brk):"")+(ex.technique?" · "+esc(ex.technique):"")+
-        (last?'<br><span class="last">'+esc(last)+'</span>':"")+'</div>'+
+    const st=ex.log?ex.log.status:"";                       // no highlight until logged
+    const val=ex.log?ex.log.value:(ex.last?String(ex.last.value):"");  // default = previous value
+    html+='<div class="wex'+(st?" s-"+st:"")+'" data-id="'+ex.id+'">'+
+      '<div class="top"><span class="nm" data-info="'+ex.id+'">'+esc(ex.exercise)+' &#8505;</span></div>'+
       '<div class="ctrls">'+
         '<input type="text" inputmode="decimal" placeholder="weight / note" value="'+esc(val)+'" data-val="'+ex.id+'">'+
         '<div class="status">'+
@@ -703,35 +774,44 @@ function renderWorkout(r){
   });
   html+='</div>';
   board.innerHTML=html;
-  wireWorkout(r);
-}
-function wireWorkout(r){
-  const exById={};r.exercises.forEach(e=>exById[e.id]=e);
-  // value field: save on change
-  document.querySelectorAll("[data-val]").forEach(inp=>inp.addEventListener("change",()=>{
-    const id=inp.dataset.val;saveWex(exById[id],{value:inp.value});
-  }));
-  // status buttons
+  // wire
+  document.querySelectorAll("[data-info]").forEach(el=>el.addEventListener("click",()=>openInfo(wExById[el.dataset.info])));
+  document.querySelectorAll("[data-val]").forEach(inp=>inp.addEventListener("change",()=>saveWex(wExById[inp.dataset.val],{value:inp.value})));
   document.querySelectorAll(".wex .status button").forEach(b=>b.addEventListener("click",()=>{
     const row=b.closest(".wex"),id=row.dataset.id,st=b.dataset.st;
     row.className="wex s-"+st;
     row.querySelectorAll(".status button").forEach(x=>x.className="");
     b.className=st==="done"?"on-done":st==="notdone"?"on-e":"on-inj";
-    const val=row.querySelector("[data-val]").value;
-    saveWex(exById[id],{value:val,status:st});
+    saveWex(wExById[id],{value:row.querySelector("[data-val]").value,status:st});
   }));
-  // swap
-  document.querySelectorAll("[data-swap]").forEach(b=>b.addEventListener("click",()=>openSwap(exById[b.dataset.swap])));
 }
 async function saveWex(ex,extra){
   if(!ex)return;
   const row=document.querySelector('.wex[data-id="'+ex.id+'"]');
-  const status=row?(row.className.indexOf("s-notdone")>=0?"notdone":row.className.indexOf("s-injury")>=0?"injury":"done"):"done";
-  const payload={action:"wlog",date:fmt(wDate),day:wDay,exerciseId:ex.id,exercise:ex.exercise,
-    value:(extra.value!=null?extra.value:""),status:extra.status||status};
-  try{const r=await api(payload);if(!r.ok)throw new Error(r.error);toast("✓ Saved");}
+  const status=extra.status||(row?(row.className.indexOf("s-notdone")>=0?"notdone":row.className.indexOf("s-injury")>=0?"injury":"done"):"done");
+  // a value edit with no status yet implies "done"
+  if(!extra.status && row && !/s-(done|notdone|injury)/.test(row.className)){
+    row.className="wex s-done";
+    const db=row.querySelector('[data-st="done"]');if(db)db.className="on-done";
+  }
+  try{const r=await api({action:"wlog",date:fmt(wDate),day:wDay,exerciseId:ex.id,exercise:ex.exercise,
+    value:(extra.value!=null?extra.value:""),status:status});
+    if(!r.ok)throw new Error(r.error);toast("✓ Saved");}
   catch(e){toast("Save failed: "+e.message,true);}
 }
+/* info popup */
+function openInfo(ex){
+  if(!ex)return;wSwapId=ex.id;
+  document.getElementById("infoName").textContent=ex.exercise;
+  document.getElementById("infoSets").textContent=ex.setsReps||"—";
+  document.getElementById("infoBreak").textContent=(ex.brk&&ex.brk!=="—")?ex.brk:"—";
+  document.getElementById("infoTech").textContent=ex.technique||"—";
+  document.getElementById("infoLast").textContent=ex.last?(ex.last.value+" ("+shortDate(ex.last.date)+")"):"—";
+  show("infoModal");
+}
+document.getElementById("infoClose").onclick=()=>hide("infoModal");
+document.getElementById("infoModal").onclick=e=>{if(e.target.id==="infoModal")hide("infoModal");};
+document.getElementById("infoSwap").onclick=()=>{hide("infoModal");openSwap(wExById[wSwapId]);};
 /* swap modal */
 function openSwap(ex){
   if(!ex)return;wSwapId=ex.id;
@@ -781,8 +861,8 @@ function statRow(label,val){return '<div class="statrow"><span>'+esc(label)+'</s
 document.getElementById("prevDay").onclick=()=>shiftDay(-1);
 document.getElementById("nextDay").onclick=()=>shiftDay(1);
 document.getElementById("dateLabel").onclick=()=>{currentDate=new Date();loadDay();};
-document.getElementById("wPrev").onclick=()=>wShift(-1);
-document.getElementById("wNext").onclick=()=>wShift(1);
+document.getElementById("wPrev").onclick=()=>wShiftWeek(-1);
+document.getElementById("wNext").onclick=()=>wShiftWeek(1);
 document.getElementById("wDateLabel").onclick=()=>{wDate=new Date();loadWorkout();};
 loadDay();
 ensureFoods();   // prefetch the food list so suggestions are instant
