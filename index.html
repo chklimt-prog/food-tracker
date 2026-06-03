@@ -95,10 +95,11 @@
   .chips .dot{font-size:.72rem;color:var(--muted)}
   .wgroup{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}
   .wgroup h2{margin:0;padding:10px 12px;font-size:1rem;border-left:5px solid var(--dinner)}
-  .wex{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid var(--line)}
-  .wex .nm{flex:1;font-weight:600;font-size:.9rem;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .wex input{width:82px;flex:none;padding:.45rem .4rem;text-align:center}
-  .wex .xbtn{flex:none;background:var(--card2);color:var(--muted);border:1px solid var(--line);padding:.42rem .55rem;font-size:.92rem}
+  .wex{display:flex;align-items:center;gap:6px;padding:9px 10px;border-top:1px solid var(--line)}
+  .wex .nm{flex:1;font-weight:600;font-size:.86rem;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wex input{width:52px;flex:none;padding:.45rem .25rem;text-align:center}
+  .wex .incbtn,.wex .okbtn,.wex .xbtn{flex:none;background:var(--card2);color:var(--muted);border:1px solid var(--line);padding:.42rem 0;font-size:.92rem;min-width:32px}
+  .wex .incbtn{color:var(--accent);font-weight:700}
   .wex .xbtn.on-e{background:#4a1f1c;color:#fff;border-color:var(--err)}
   .wex.s-done{border-left:3px solid var(--ok)}
   .wex.s-notdone{border-left:3px solid var(--err)}
@@ -120,7 +121,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycby0mwnvw0K67WfCoOAA3-KiWDz001E40v-rqlMP39udE6HNSM4GR4Clrmh5BbAOj0Jm/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbzde164kRPvCboVZYCVGiKJoBhNrtNsjIj9oC0P0JJk_vTBPAl4Xw3ED5dYNk0qDMMc/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -762,28 +763,50 @@ function renderWorkout(r){
   if(!r.exercises.length){board.innerHTML='<div class="card">No exercises. Run “Set up / migrate sheets” in the spreadsheet.</div>';return;}
   let html='<div class="wgroup"><h2>Day '+r.dayNum+' · '+esc(r.dayName)+'</h2>';
   r.exercises.forEach(ex=>{
-    const logged=ex.log&&String(ex.log.value||"").trim()!=="";
-    const val=logged?ex.log.value:(ex.last?String(ex.last.value):"");  // default = previous value
-    const cls=logged?rowClass(ex.log.value):"";                         // only colour once addressed
-    const isX=logged&&String(ex.log.value).toUpperCase()==="X";
+    const log=(ex.log&&String(ex.log.value||"").trim()!=="")?ex.log:null;
+    const loggedVal=log?String(log.value):"";
+    const lastVal=ex.last?String(ex.last.value):"";
+    const cls=log?rowClass(loggedVal):"";
+    const isX=log&&loggedVal.toUpperCase()==="X";
     html+='<div class="wex'+(cls?" "+cls:"")+'" data-id="'+ex.id+'">'+
       '<span class="nm" data-info="'+ex.id+'">'+esc(ex.exercise)+' &#8505;</span>'+
-      '<input type="text" inputmode="decimal" placeholder="wt / note" value="'+esc(val)+'" data-val="'+ex.id+'">'+
+      '<input type="text" inputmode="text" autocomplete="off" placeholder="'+esc(lastVal||"wt / note")+'" '+
+        'value="'+esc(loggedVal)+'" data-val="'+ex.id+'" data-last="'+esc(lastVal)+'" data-step="'+esc(String(ex.step||""))+'">'+
+      '<button class="incbtn" data-inc="'+ex.id+'" title="+ one increment">+</button>'+
+      '<button class="okbtn" data-ok="'+ex.id+'" title="Confirm">✓</button>'+
       '<button class="xbtn'+(isX?" on-e":"")+'" data-x="'+ex.id+'" title="Not completed">✕</button>'+
       '</div>';
   });
   html+='</div>';
   board.innerHTML=html;
-  document.querySelectorAll("[data-info]").forEach(el=>el.addEventListener("click",()=>openInfo(wExById[el.dataset.info])));
-  document.querySelectorAll("[data-val]").forEach(inp=>inp.addEventListener("change",()=>{
-    const row=inp.closest(".wex");
-    row.querySelector(".xbtn").classList.remove("on-e");
-    row.className="wex "+rowClass(inp.value);
-    saveWex(wExById[inp.dataset.val],inp.value);
+
+  const inputs=Array.prototype.slice.call(board.querySelectorAll("[data-val]"));
+  function focusNext(inp){const i=inputs.indexOf(inp);if(i>=0&&i+1<inputs.length)inputs[i+1].focus();else inp.blur();}
+  function mark(row,v){row.querySelector(".xbtn").classList.remove("on-e");row.className="wex "+rowClass(v);}
+  function commit(inp){let v=inp.value.trim();if(!v)v=inp.dataset.last||"";if(v)inp.value=v;return v;}
+
+  board.querySelectorAll("[data-info]").forEach(el=>el.addEventListener("click",()=>openInfo(wExById[el.dataset.info])));
+  inputs.forEach(inp=>{
+    inp.addEventListener("keydown",e=>{
+      if(e.key==="Enter"){e.preventDefault();const v=commit(inp),row=inp.closest(".wex");mark(row,v);if(v)saveWex(wExById[inp.dataset.val],v);focusNext(inp);}
+    });
+    inp.addEventListener("change",()=>{const row=inp.closest(".wex");mark(row,inp.value);saveWex(wExById[inp.dataset.val],inp.value);});
+  });
+  board.querySelectorAll("[data-ok]").forEach(b=>b.addEventListener("click",()=>{
+    const row=b.closest(".wex"),inp=row.querySelector("[data-val]"),v=commit(inp);mark(row,v);if(v)saveWex(wExById[b.dataset.ok],v);
   }));
-  document.querySelectorAll("[data-x]").forEach(b=>b.addEventListener("click",()=>{
+  board.querySelectorAll("[data-inc]").forEach(b=>b.addEventListener("click",()=>{
     const row=b.closest(".wex"),inp=row.querySelector("[data-val]");
-    const nowX=!b.classList.contains("on-e");      // toggle
+    const step=parseFloat(inp.dataset.step)||1;
+    let base=parseFloat(String(inp.value).replace(",","."));
+    if(isNaN(base))base=parseFloat(String(inp.dataset.last).replace(",","."));
+    if(isNaN(base))base=0;
+    inp.value=String(Math.round((base+step)*10)/10);
+    mark(row,inp.value);saveWex(wExById[b.dataset.inc],inp.value);
+  }));
+  board.querySelectorAll("[data-x]").forEach(b=>b.addEventListener("click",()=>{
+    const row=b.closest(".wex"),inp=row.querySelector("[data-val]");
+    const nowX=!b.classList.contains("on-e");
     if(nowX){inp.value="X";b.classList.add("on-e");row.className="wex s-notdone";}
     else{inp.value="";b.classList.remove("on-e");row.className="wex";}
     saveWex(wExById[b.dataset.x],inp.value);
