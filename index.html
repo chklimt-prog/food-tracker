@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Food Tracker</title>
+<title>CK Health Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#06100b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   :root{
     --bg:#06100b; --card:#0c1813; --card2:#12241b; --line:#1d3b2c; --ink:#d6ffe9; --muted:#5fae87;
@@ -31,6 +36,7 @@
   .datenav{display:flex;align-items:center;justify-content:center;gap:14px;margin:6px 0}
   .datenav button{background:var(--card2);color:var(--ink);width:42px;height:42px;border-radius:50%;font-size:1.25rem;padding:0}
   .datenav .label{font-weight:600;min-width:150px;text-align:center}
+  .datenav .today{width:auto;height:34px;border-radius:17px;font-size:.8rem;padding:0 14px;border:1px solid var(--line);color:var(--accent)}
 
   .tabs{display:flex;gap:6px;margin:10px 0}
   .tabs button{flex:1;background:var(--card2);color:var(--ink);padding:.55rem .3rem;font-size:.92rem}
@@ -143,7 +149,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbx0tqYJXHSx_MWHGnOWZXHw7Z9JfFHnPlX06WzGmoBOxlCZsT9RWeSCHqc3JYXJM7Vq/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbyQeqTybnqJ6p013duJ9US62RHlmb1OXRmGNqwS0Hrjl1_94s8bUqfwxY0bz10Ouj0/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -155,6 +161,7 @@
   <button id="prevDay">&lsaquo;</button>
   <span class="label" id="dateLabel">Today</span>
   <button id="nextDay">&rsaquo;</button>
+  <button id="todayDay" class="today">Today</button>
 </div>
 
 <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
@@ -173,6 +180,7 @@
     <button id="wPrev">&lsaquo;</button>
     <span class="label" id="wDateLabel">Today</span>
     <button id="wNext">&rsaquo;</button>
+    <button id="wToday" class="today">Today</button>
   </div>
   <div id="weekChips" class="chips"></div>
   <div id="wLegend" class="muted" style="font-size:.74rem;margin:2px 2px 6px">✓ completed · ✕ not completed</div>
@@ -180,6 +188,12 @@
 </div>
 
 <div id="view-dashboard" class="view" style="display:none">
+  <div class="datenav">
+    <button id="dPrev">&lsaquo;</button>
+    <span class="label" id="dDateLabel">Today</span>
+    <button id="dNext">&rsaquo;</button>
+    <button id="dToday" class="today">Today</button>
+  </div>
   <div id="dash"><p class="muted">Loading…</p></div>
 </div>
 
@@ -883,15 +897,17 @@ document.getElementById("swSave").onclick=async()=>{
 function shortDate(s){const p=String(s).split("-");return p.length===3?(p[2]+"."+p[1]):s;}
 
 /* ===================== DASHBOARD ===================== */
+let dashDate=new Date();
 async function loadDashboard(){
   const el=document.getElementById("dash");el.innerHTML='<p class="muted">Loading…</p>';
-  const today=fmt(new Date());
+  document.getElementById("dDateLabel").textContent=dayLabel(dashDate);
+  const today=fmt(dashDate);
   try{
     const [food,wk,body,act]=await Promise.all([
       api({action:"day",date:today}),
       api({action:"wweek",date:today}),
       api({action:"body"}).catch(()=>null),
-      api({action:"activity"}).catch(()=>null)]);
+      api({action:"activity",date:today}).catch(()=>null)]);
     const t=(food&&food.ok)?food.totals:{calories:0,carbs:0,fat:0,protein:0,fiber:0,sugar:0};
     const done=(wk&&wk.ok)?(wk.done||[]):[];
     let html='<div class="card"><h3>Today · nutrition</h3>'+
@@ -929,6 +945,14 @@ function statRow(label,val){return '<div class="statrow"><span>'+esc(label)+'</s
 document.getElementById("prevDay").onclick=()=>shiftDay(-1);
 document.getElementById("nextDay").onclick=()=>shiftDay(1);
 document.getElementById("dateLabel").onclick=()=>{currentDate=new Date();loadDay();};
+document.getElementById("todayDay").onclick=()=>{currentDate=new Date();loadDay();};
+document.getElementById("wToday").onclick=()=>{wDate=new Date();loadWorkout();};
+function dShift(n){dashDate.setDate(dashDate.getDate()+n);loadDashboard();}
+document.getElementById("dPrev").onclick=()=>dShift(-1);
+document.getElementById("dNext").onclick=()=>dShift(1);
+document.getElementById("dDateLabel").onclick=()=>{dashDate=new Date();loadDashboard();};
+document.getElementById("dToday").onclick=()=>{dashDate=new Date();loadDashboard();};
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
 document.getElementById("wPrev").onclick=()=>wShiftWeek(-1);
 document.getElementById("wNext").onclick=()=>wShiftWeek(1);
 document.getElementById("wDateLabel").onclick=()=>{wDate=new Date();loadWorkout();};
