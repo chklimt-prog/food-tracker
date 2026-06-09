@@ -143,7 +143,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbxsOIPGMlqzrth_mDOgb4tIoEHyloJLdPzz-q_PdYhnSNqa5iLzxshLk3i7c-s0srUT/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbxMeyFI5Un2TiiSaXIYuQsQYsGGejJXf6yDftdNqr_Vzvflu2LYt0xGfUxBBmWAmRA/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -887,7 +887,11 @@ async function loadDashboard(){
   const el=document.getElementById("dash");el.innerHTML='<p class="muted">Loading…</p>';
   const today=fmt(new Date());
   try{
-    const [food,wk]=await Promise.all([api({action:"day",date:today}),api({action:"wweek",date:today})]);
+    const [food,wk,body,act]=await Promise.all([
+      api({action:"day",date:today}),
+      api({action:"wweek",date:today}),
+      api({action:"body"}).catch(()=>null),
+      api({action:"activity"}).catch(()=>null)]);
     const t=(food&&food.ok)?food.totals:{calories:0,carbs:0,fat:0,protein:0,fiber:0,sugar:0};
     const done=(wk&&wk.ok)?(wk.done||[]):[];
     let html='<div class="card"><h3>Today · nutrition</h3>'+
@@ -895,6 +899,24 @@ async function loadDashboard(){
       statRow("Carbs",Math.round(t.carbs)+" g")+statRow("Fat",Math.round(t.fat)+" g")+
       statRow("Protein",Math.round(t.protein)+" g")+statRow("Fiber",Math.round(t.fiber)+" g")+
       statRow("Sugar",Math.round(t.sugar)+" g")+'</div>';
+    if(act&&act.ok){
+      html+='<div class="card"><h3>Today · activity · Google Health</h3>'+
+        statRow("Calories burned",act.calories!=null?act.calories+" kcal":"—")+
+        statRow("Steps",act.steps!=null?act.steps.toLocaleString():"—")+
+        (act.weight!=null?statRow("Weight (via Google Health)",act.weight+" kg"):"")+
+        (act.fatPct!=null?statRow("Body fat (via Google Health)",act.fatPct+" %"):"")+'</div>';
+    }else{
+      html+='<div class="card"><h3>Today · activity · Google Health</h3><p class="muted">'+
+        ((act&&act.error)?esc(act.error):"Not connected")+
+        ' — run “Connect Google Health” in the spreadsheet menu.</p></div>';
+    }
+    if(body&&body.ok){
+      html+='<div class="card"><h3>Body · Withings'+(body.date?' · '+body.date:'')+'</h3>'+
+        statRow("Weight",body.weight!=null?body.weight+" kg":"—")+
+        statRow("Body fat",body.fatPct!=null?body.fatPct+" %":"—")+
+        statRow("Fat mass",body.fatMass!=null?body.fatMass+" kg":"—")+
+        statRow("Fat-free mass",body.fatFree!=null?body.fatFree+" kg":"—")+'</div>';
+    }
     html+='<div class="card"><h3>This week · workouts</h3>'+
       WDAYS.map(([n,nm])=>statRow("Day "+n+" · "+nm,done.indexOf(n)>=0?"✓ done":"—")).join("")+
       '<div class="statrow"><b>'+done.length+' / 4</b><span class="muted">completed</span></div></div>';
