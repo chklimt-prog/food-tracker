@@ -118,6 +118,17 @@
   .wex.s-done{border-left:3px solid var(--ok)}
   .wex.s-notdone{border-left:3px solid var(--err)}
   .wex.s-notdone input{opacity:.4}
+  .aex{display:flex;align-items:center;gap:9px;padding:9px 10px;border-top:1px solid var(--line)}
+  .aex .ainc{width:20px;height:20px;flex:none;accent-color:var(--accent)}
+  .aex .anm{flex:1;min-width:0;display:flex;flex-direction:column}
+  .aex .atype{font-size:.9rem;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+  .aex .ameta{color:var(--muted);font-size:.74rem}
+  .aex .acal{font-size:.84rem;white-space:nowrap}
+  .aex .acal s{color:var(--muted)}
+  .aex .adel{flex:none;background:none;color:var(--muted);padding:2px 6px;font-size:.95rem}
+  .aex.ex{opacity:.6}
+  #actFactorRow button.sel{background:var(--accent-dim);color:#fff;border-color:var(--accent)}
+  .addbtn{background:var(--card2);color:var(--accent);border:1px solid var(--accent-dim);border-radius:20px;padding:.6rem 1.2rem;font-size:.9rem}
   .status{display:flex;gap:4px;flex:none}
   .status button{background:var(--card2);color:var(--muted);padding:.42rem .5rem;border:1px solid var(--line);font-size:.92rem}
   .status button.on-done{background:#13351f;color:#fff;border-color:var(--ok)}
@@ -149,7 +160,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbyQeqTybnqJ6p013duJ9US62RHlmb1OXRmGNqwS0Hrjl1_94s8bUqfwxY0bz10Ouj0/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbySPRuMf8uP-zq5SztE-wgmvn1tDRx_wsyTIq_wOjJBYQLN1i5Fw0fovIOSIvQMxXA9/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -187,6 +198,18 @@
   <div id="wBoard"><p class="muted">Loading…</p></div>
 </div>
 
+<div id="view-activity" class="view" style="display:none">
+  <div class="datenav">
+    <button id="aPrev">&lsaquo;</button>
+    <span class="label" id="aDateLabel">Today</span>
+    <button id="aNext">&rsaquo;</button>
+    <button id="aToday" class="today">Today</button>
+  </div>
+  <div id="aBoard"><p class="muted">Loading…</p></div>
+  <div class="totals" id="actTotals"><span class="kcal">Counted <b id="aTotal">0</b> kcal</span><span class="macroline" id="aRaw">of 0 logged</span></div>
+  <button id="aAddBtn" class="addbtn" style="margin:10px auto;display:block">+ Add activity</button>
+</div>
+
 <div id="view-dashboard" class="view" style="display:none">
   <div class="datenav">
     <button id="dPrev">&lsaquo;</button>
@@ -200,6 +223,7 @@
 <nav id="tabbar">
   <button data-view="food" class="active"><span>🍎</span>Food</button>
   <button data-view="workout"><span>🏋️</span>Workout</button>
+  <button data-view="activity"><span>🔥</span>Activity</button>
   <button data-view="dashboard"><span>📊</span>Dashboard</button>
 </nav>
 
@@ -320,6 +344,33 @@
     <div class="field"><label>Break</label><input id="swBreak" autocomplete="off"></div>
     <div class="field"><label>Growth technique</label><input id="swTech" autocomplete="off"></div>
     <div class="row"><button class="ghost" id="swCancel">Cancel</button><button id="swSave">Swap</button></div>
+  </div>
+</div>
+
+<!-- Add activity -->
+<div class="modal" id="actAddModal">
+  <div class="sheet">
+    <h3>Add activity</h3>
+    <div class="field"><label>Type</label><input id="actType" autocomplete="off" placeholder="e.g. Running"></div>
+    <div class="field"><label>Duration (min)</label><input id="actDur" inputmode="decimal" autocomplete="off"></div>
+    <div class="field"><label>Burned calories (kcal)</label><input id="actCal" inputmode="decimal" autocomplete="off"></div>
+    <div class="row"><button class="ghost" id="actAddCancel">Cancel</button><button id="actAddSave">Add</button></div>
+  </div>
+</div>
+
+<!-- Activity type rule -->
+<div class="modal" id="actRuleModal">
+  <div class="sheet">
+    <h3 id="actRuleTitle">Activity type</h3>
+    <p class="muted" style="font-size:.82rem">How much of this activity type's calories should count, on every day?</p>
+    <div class="row" id="actFactorRow" style="gap:6px">
+      <button class="ghost" data-f="1">100%</button>
+      <button class="ghost" data-f="0.75">75%</button>
+      <button class="ghost" data-f="0.5">50%</button>
+      <button class="ghost" data-f="0.25">25%</button>
+    </div>
+    <label class="statrow" style="cursor:pointer"><span>Always exclude this type</span><input type="checkbox" id="actAuto"></label>
+    <div class="row"><button class="ghost" id="actRuleCancel">Cancel</button><button id="actRuleSave">Save rule</button></div>
   </div>
 </div>
 
@@ -752,9 +803,10 @@ let curView="food";
 function switchView(v){
   curView=v;
   document.querySelectorAll("#tabbar button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
-  ["food","workout","dashboard"].forEach(x=>document.getElementById("view-"+x).style.display=(x===v?"":"none"));
+  ["food","workout","activity","dashboard"].forEach(x=>document.getElementById("view-"+x).style.display=(x===v?"":"none"));
   document.getElementById("foodTotals").style.display=(v==="food"?"":"none");
   if(v==="workout")loadWorkout();
+  if(v==="activity")loadActivity();
   if(v==="dashboard")loadDashboard();
 }
 document.querySelectorAll("#tabbar button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
@@ -895,6 +947,92 @@ document.getElementById("swSave").onclick=async()=>{
   finally{document.getElementById("swSave").disabled=false;}
 };
 function shortDate(s){const p=String(s).split("-");return p.length===3?(p[2]+"."+p[1]):s;}
+
+/* ===================== ACTIVITY ===================== */
+let aDate=new Date(), aRuleType="";
+function aShift(n){aDate.setDate(aDate.getDate()+n);loadActivity();}
+async function loadActivity(){
+  document.getElementById("aDateLabel").textContent=dayLabel(aDate);
+  const board=document.getElementById("aBoard");board.innerHTML='<p class="muted">Loading…</p>';
+  try{
+    const r=await api({action:"activities",date:fmt(aDate)});
+    if(!r.ok)throw new Error(r.error||"failed");
+    renderActivity(r);
+  }catch(e){board.innerHTML='<p class="err">Could not load: '+e.message+'</p>';}
+}
+function renderActivity(r){
+  const board=document.getElementById("aBoard");
+  document.getElementById("aTotal").textContent=r.total;
+  document.getElementById("aRaw").textContent="of "+r.raw+" logged";
+  if(!r.items.length){board.innerHTML='<div class="card"><p class="muted">No activities for this day. They sync from Google Health automatically, or add one manually below.</p></div>';return;}
+  let html='<div class="wgroup">';
+  r.items.forEach(it=>{
+    const meta=[it.time,it.duration?it.duration+" min":"",it.source==="manual"?"manual":""].filter(Boolean).join(" · ");
+    const calTxt=it.excluded
+      ? '<s>'+it.calories+'</s> 0 kcal'
+      : (it.factor!==1? '<s>'+it.calories+'</s> '+it.effective+" kcal" : it.effective+" kcal");
+    const tag=it.autoExcluded?' · <span class="err">type off</span>':(it.factor!==1?' · '+Math.round(it.factor*100)+'%':'');
+    html+='<div class="aex'+(it.excluded?" ex":"")+'" data-id="'+it.id+'">'+
+      '<input type="checkbox" class="ainc" '+(it.excluded?'':'checked')+' data-id="'+it.id+'" title="Count this activity">'+
+      '<div class="anm"><b class="atype" data-type="'+esc(it.type)+'">'+esc(it.type)+'</b>'+
+        '<span class="ameta">'+esc(meta)+tag+'</span></div>'+
+      '<span class="acal">'+calTxt+'</span>'+
+      '<button class="adel" data-del="'+it.id+'" title="Delete">🗑</button>'+
+      '</div>';
+  });
+  html+='</div>';
+  board.innerHTML=html;
+  board.querySelectorAll(".ainc").forEach(c=>c.addEventListener("change",()=>actSet(c.dataset.id,!c.checked)));
+  board.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>actDel(b.dataset.del)));
+  board.querySelectorAll(".atype").forEach(b=>b.addEventListener("click",()=>openActRule(b.dataset.type,r.rules)));
+}
+async function actSet(id,excluded){
+  try{const r=await api({action:"actexclude",id:id,value:excluded?"true":"false",date:fmt(aDate)});if(r.ok)renderActivity(r);}
+  catch(e){toast("Failed: "+e.message,true);}
+}
+async function actDel(id){
+  try{const r=await api({action:"actdel",id:id,date:fmt(aDate)});if(r.ok)renderActivity(r);}
+  catch(e){toast("Failed: "+e.message,true);}
+}
+/* manual add */
+document.getElementById("aAddBtn").onclick=()=>{document.getElementById("actType").value="";document.getElementById("actDur").value="";document.getElementById("actCal").value="";show("actAddModal");};
+document.getElementById("actAddCancel").onclick=()=>hide("actAddModal");
+document.getElementById("actAddModal").onclick=e=>{if(e.target.id==="actAddModal")hide("actAddModal");};
+document.getElementById("actAddSave").onclick=async()=>{
+  const type=document.getElementById("actType").value.trim();
+  if(!type){toast("Enter a type",true);return;}
+  try{const r=await api({action:"actadd",date:fmt(aDate),type:type,
+    duration:document.getElementById("actDur").value,calories:document.getElementById("actCal").value});
+    if(!r.ok)throw new Error(r.error);hide("actAddModal");renderActivity(r);}
+  catch(e){toast("Add failed: "+e.message,true);}
+};
+/* per-type rule */
+let aRuleFactor=1;
+function openActRule(type,rules){
+  aRuleType=type;aRuleFactor=1;
+  const existing=(rules||[]).find(x=>x.type.toLowerCase()===type.toLowerCase());
+  if(existing)aRuleFactor=existing.factor;
+  document.getElementById("actRuleTitle").textContent=type;
+  document.getElementById("actAuto").checked=existing?!!existing.auto:false;
+  document.querySelectorAll("#actFactorRow button").forEach(b=>b.classList.toggle("sel",parseFloat(b.dataset.f)===aRuleFactor));
+  show("actRuleModal");
+}
+document.querySelectorAll("#actFactorRow button").forEach(b=>b.addEventListener("click",()=>{
+  aRuleFactor=parseFloat(b.dataset.f);
+  document.querySelectorAll("#actFactorRow button").forEach(x=>x.classList.toggle("sel",x===b));
+}));
+document.getElementById("actRuleCancel").onclick=()=>hide("actRuleModal");
+document.getElementById("actRuleModal").onclick=e=>{if(e.target.id==="actRuleModal")hide("actRuleModal");};
+document.getElementById("actRuleSave").onclick=async()=>{
+  try{const r=await api({action:"actrule",type:aRuleType,factor:String(aRuleFactor),
+    autoExclude:document.getElementById("actAuto").checked?"true":"false",date:fmt(aDate)});
+    if(!r.ok)throw new Error(r.error);hide("actRuleModal");renderActivity(r);}
+  catch(e){toast("Failed: "+e.message,true);}
+};
+document.getElementById("aPrev").onclick=()=>aShift(-1);
+document.getElementById("aNext").onclick=()=>aShift(1);
+document.getElementById("aDateLabel").onclick=()=>{aDate=new Date();loadActivity();};
+document.getElementById("aToday").onclick=()=>{aDate=new Date();loadActivity();};
 
 /* ===================== DASHBOARD ===================== */
 let dashDate=new Date();
