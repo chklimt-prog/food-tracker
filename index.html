@@ -160,7 +160,7 @@
 
 <!-- ===== EDIT THESE TWO LINES (paste your /exec URL again) ===== -->
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbyYBRcFa3K2PkuuhKx0TGdFU8a82otTyhPZoEoSmyW0rykfks_WzJBKXbT6yO-LPNjl/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbxTxleUa2rbVUsXAIbQ8bGuXqaHxytXmgTLMV2c80kCbLScKtZiRA0klIokIyIsyifO/exec";
   const API_KEY = "";
 </script>
 <!-- ============================================================= -->
@@ -1041,11 +1041,12 @@ async function loadDashboard(){
   document.getElementById("dDateLabel").textContent=dayLabel(dashDate);
   const today=fmt(dashDate);
   try{
-    const [food,wk,body,act]=await Promise.all([
+    const [food,wk,body,act,gbody]=await Promise.all([
       api({action:"day",date:today}),
       api({action:"wweek",date:today}),
       api({action:"body"}).catch(()=>null),
-      api({action:"activity",date:today}).catch(()=>null)]);
+      api({action:"activity",date:today}).catch(()=>null),
+      api({action:"bodydata"}).catch(()=>null)]);
     const t=(food&&food.ok)?food.totals:{calories:0,carbs:0,fat:0,protein:0,fiber:0,sugar:0};
     const done=(wk&&wk.ok)?(wk.done||[]):[];
     let html='<div class="card"><h3>Today · nutrition</h3>'+
@@ -1056,13 +1057,18 @@ async function loadDashboard(){
     if(act&&act.ok){
       html+='<div class="card"><h3>Today · activity · Google Health</h3>'+
         statRow("Calories burned",act.calories!=null?act.calories+" kcal":"—")+
-        statRow("Steps",act.steps!=null?act.steps.toLocaleString():"—")+
-        (act.weight!=null?statRow("Weight (via Google Health)",act.weight+" kg"):"")+
-        (act.fatPct!=null?statRow("Body fat (via Google Health)",act.fatPct+" %"):"")+'</div>';
+        statRow("Steps",act.steps!=null?act.steps.toLocaleString():"—")+'</div>';
     }else{
       html+='<div class="card"><h3>Today · activity · Google Health</h3><p class="muted">'+
         ((act&&act.error)?esc(act.error):"Not connected")+
         ' — run “Connect Google Health” in the spreadsheet menu.</p></div>';
+    }
+    if(gbody&&gbody.ok&&!gbody.empty){
+      html+='<div class="card"><h3>Body'+(gbody.date?' · '+gbody.date:'')+'</h3>'+
+        statRow("Weight",gbody.weight!=null?gbody.weight+" kg":"—")+
+        statRow("Body fat",gbody.fatPct!=null?gbody.fatPct+" %":"—")+
+        statRow("Fat mass",gbody.fatMass!=null?gbody.fatMass+" kg":"—")+
+        statRow("Fat-free mass",gbody.fatFree!=null?gbody.fatFree+" kg":"—")+'</div>';
     }
     if(body&&body.ok){
       html+='<div class="card"><h3>Body · Withings'+(body.date?' · '+body.date:'')+'</h3>'+
